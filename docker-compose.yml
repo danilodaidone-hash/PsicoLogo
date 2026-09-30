@@ -1,0 +1,22 @@
+# PsicoLogo: l'app (Node.js) e Caddy, che gestisce HTTPS e il certificato in automatico.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:3000:3000"   # raggiungibile solo da Caddy, non da Internet
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [app]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  caddy_data: {}
+  caddy_config: {}

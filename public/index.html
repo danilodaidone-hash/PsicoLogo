@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>PsicoLogo</title>
+<style>
+@font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('/fonts/atkinson-hyperlegible-latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('/fonts/atkinson-hyperlegible-latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'JetBrains Mono';src:url('/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'JetBrains Mono';src:url('/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+/* Layout: gestionale personale a due colonne — barra laterale con studio attivo e account, area di lavoro a schede. Il colore identifica lo studio. */
+:root{
+  --bg:#F2F4F3; --surface:#FFFFFF; --surface-2:#E9EEEC; --fg:#16201D; --muted:#5B6A64; --line:#D8E0DC;
+  --accent:#2C6B5E; --accent-soft:#DCEBE6; --on-accent:#FFFFFF;
+  --good:#2E7A4C; --warn:#A8701A; --bad:#B0413A;
+  --c1:#7657C0; --c2:#2F74BE; --c3:#C27F22; --c4:#BE4C72; --c5:#5E8231; --c6:#8C5B3E;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1C2622; --fg:#E2EAE6; --muted:#93A39C; --line:#2A3632;
+  --accent:#6CC0AA; --accent-soft:#1E3530; --on-accent:#0E1412;
+  --good:#6CC08A; --warn:#E2A94F; --bad:#EE7F77;
+  --c1:#A58BEB; --c2:#6FA8E8; --c3:#E6A956; --c4:#E57FA2; --c5:#9BC66A; --c6:#CF9A78; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1C2622; --fg:#E2EAE6; --muted:#93A39C; --line:#2A3632;
+  --accent:#6CC0AA; --accent-soft:#1E3530; --on-accent:#0E1412;
+  --good:#6CC08A; --warn:#E2A94F; --bad:#EE7F77;
+  --c1:#A58BEB; --c2:#6FA8E8; --c3:#E6A956; --c4:#E57FA2; --c5:#9BC66A; --c6:#CF9A78; color-scheme:dark}
+html,body{height:100%}
+body{margin:0}
+.sync{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:6px;padding:0 6px}
+.sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--good)}
+.sync.busy::before{background:var(--warn)}
+.sync.err{color:var(--bad)}
+.sync.err::before{background:var(--bad)}
+.logtbl td{font-size:.82rem;padding:6px 14px}
+@media (max-width:760px){.sync{display:none}}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.75rem} h2{font-size:1.2rem} h3{font-size:1rem}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:.88em}
+.muted{color:var(--muted)}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:18px;position:sticky;top:env(safe-area-inset-top,0px);height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.brand svg{flex:none}
+.brand b{font-family:var(--f-display);font-size:1.3rem;letter-spacing:-.02em}
+.brand small{display:block;color:var(--muted);font-size:.75rem;line-height:1.2}
+nav{display:flex;flex-direction:column;gap:2px}
+nav .sm{display:none}
+nav button svg{display:none}
+.daystrip{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.daystrip button{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;font-size:.72rem;color:var(--muted)}
+.daystrip button b{font-family:var(--f-display);font-size:1.05rem;color:var(--fg)}
+.daystrip button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.daystrip button[aria-pressed="true"] b{color:var(--on-accent)}
+.daystrip .today b{text-decoration:underline}
+nav button{display:flex;align-items:center;justify-content:space-between;gap:8px;border:0;background:none;padding:9px 10px;border-radius:var(--r);cursor:pointer;text-align:left;color:var(--muted);font-weight:700}
+nav button:hover{background:var(--surface-2);color:var(--fg)}
+nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.badge{font-family:var(--f-mono);font-size:.72rem;background:var(--surface-2);color:var(--fg);padding:1px 7px;border-radius:99px}
+.sedesel{display:flex;flex-direction:column;gap:6px;font-size:.8rem;color:var(--muted)}
+.me{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 6px 0;border-top:1px solid var(--line)}
+.me .avatar{width:36px;height:36px;font-size:.85rem}
+.me .who{flex:1;min-width:0;line-height:1.25}
+.me .who b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.me .who small{color:var(--muted);font-size:.75rem}
+.me .acts{display:flex;flex-direction:column;gap:2px}
+.me .acts button{border:0;background:none;color:var(--accent);cursor:pointer;font-size:.8rem;font-weight:700;padding:2px 4px;text-align:right}
+.login{min-height:100%;display:grid;place-items:center;padding-block:32px;padding-inline:16px;background:
+  radial-gradient(circle at 15% 10%,var(--accent-soft),transparent 45%),var(--bg)}
+.login-card{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 18px 40px rgba(0,0,0,.08)}
+.login-card form{display:flex;flex-direction:column;gap:14px}
+.login-card .btn.primary{padding:11px;font-size:1rem}
+.pw{display:flex;gap:6px}
+.pw input{flex:1}
+.pw button{border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r);padding:0 10px;cursor:pointer;font-size:.8rem;color:var(--muted);font-weight:700}
+.err{margin:0;color:var(--bad);font-size:.88rem;font-weight:700}
+.demoacc{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+.demoacc .r{display:flex;align-items:center;gap:10px;font-size:.85rem}
+.demoacc .r .grow{min-width:0}
+.demoacc code{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.small{font-size:.8rem}
+.sedesel select{padding:8px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+.sedesel select{font-weight:700;background:var(--accent-soft);color:var(--accent);border-color:transparent;font-size:.95rem}
+.chip.sede{background:none;border:1px solid var(--line);color:var(--fg);font-weight:400}
+.sedi{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.sedi .panel{padding:16px;display:flex;flex-direction:column;gap:8px}
+td.pres{font-size:.82rem}
+.demo{font-size:.75rem;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin:0}
+.demo button{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;text-decoration:underline;font-size:inherit}
+main{padding-block:26px 60px;padding-inline:clamp(16px,3vw,36px);min-width:0;display:flex;flex-direction:column;gap:22px}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.eyebrow{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.btn{border:1px solid var(--line);background:var(--surface);padding:7px 13px;border-radius:var(--r);cursor:pointer;font-weight:700;font-size:.9rem;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.small{padding:4px 9px;font-size:.8rem}
+.btn.ghost{background:none;border-color:transparent;color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.panel>header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel .body{padding:14px 16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--f-display);font-size:1.7rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.82rem;color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--pc,var(--accent))}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.chip.good{color:var(--good);background:color-mix(in srgb,var(--good) 13%,transparent)}
+.chip.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.chip.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 13%,transparent)}
+.chip.area-psicologia{color:var(--c1);background:color-mix(in srgb,var(--c1) 13%,transparent)}
+.chip.area-logopedia{color:var(--c3);background:color-mix(in srgb,var(--c3) 15%,transparent)}
+.tl-time{font-family:var(--f-mono);font-size:.85rem;width:48px;flex:none}
+.grow{flex:1;min-width:0}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--surface-2)}
+td.r,th.r{text-align:right}
+input[type=search],.field{padding:8px 11px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);min-width:0}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 11px 4px 8px;font-size:.82rem;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.pill[aria-pressed="false"]{opacity:.45}
+/* Agenda */
+.cal-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.cal{display:grid;grid-template-columns:54px repeat(6,minmax(130px,1fr));min-width:840px}
+.cal .dh{padding:10px 8px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);font-size:.85rem;position:sticky;top:0;background:var(--surface);z-index:2}
+.cal .dh b{font-family:var(--f-display);font-size:1.15rem;margin-right:4px}
+.cal .dh.today{color:var(--accent)}
+.gut{position:relative;height:var(--h)}
+.gut span{position:absolute;right:8px;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);transform:translateY(-50%)}
+.gut span:first-child{transform:none}
+.daycol{position:relative;height:var(--h);border-left:1px solid var(--line);cursor:copy;
+  background-image:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px var(--hp))}
+.daycol.today{background-color:color-mix(in srgb,var(--accent) 5%,transparent)}
+.ev{position:absolute;border-radius:6px;padding:4px 7px;font-size:.76rem;line-height:1.25;overflow:hidden;cursor:pointer;
+  background:color-mix(in srgb,var(--pc) 17%,var(--surface));border:1px solid color-mix(in srgb,var(--pc) 40%,transparent);color:var(--fg)}
+.ev:hover{background:color-mix(in srgb,var(--pc) 27%,var(--surface))}
+.ev b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .t{font-family:var(--f-mono);font-size:.68rem;color:var(--muted)}
+.ev.disdetto{opacity:.5;text-decoration:line-through}
+.ev.assente{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--warn) 18%,var(--surface)) 0 6px,var(--surface) 6px 12px)}
+.ev.svolto::after{content:"✓";position:absolute;top:3px;right:6px;color:var(--good);font-weight:700}
+.now{position:absolute;left:0;right:0;height:2px;background:var(--bad);z-index:1;pointer-events:none}
+.now::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--bad)}
+/* Scheda paziente */
+.phead{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.avatar{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:1.1rem;background:color-mix(in srgb,var(--pc) 20%,var(--surface));color:var(--pc);flex:none}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:700;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--fg);border-color:var(--accent)}
+dl.kv{display:grid;grid-template-columns:minmax(120px,max-content) minmax(0,1fr);gap:8px 20px;margin:0}
+dl.kv dt{color:var(--muted);font-size:.85rem} dl.kv dd{margin:0}
+.lock{display:flex;gap:14px;align-items:flex-start;padding:22px;background:var(--surface-2);border-radius:var(--r)}
+.note{padding:14px 16px;border-top:1px solid var(--line)}
+.note:first-child{border-top:0}
+.note p{margin:6px 0 0;max-width:70ch;white-space:pre-wrap}
+textarea{width:100%;min-height:90px;padding:10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);resize:vertical}
+.goal{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.goal input{margin-top:4px}
+.goal.done span{text-decoration:line-through;color:var(--muted)}
+.check{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.check:first-child{border-top:0}
+.check input{margin-top:4px;width:17px;height:17px;accent-color:var(--accent)}
+/* Modale */
+.modal{position:fixed;inset:0;background:color-mix(in srgb,var(--fg) 40%,transparent);display:grid;place-items:center;padding:16px;z-index:50}
+.sheet{background:var(--surface);border-radius:12px;width:min(620px,100%);max-height:calc(100% - 24px);overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.sheet>header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.sheet .body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.sheet footer{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:14px 20px;border-top:1px solid var(--line)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid label,.fl{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);font-weight:700;min-width:0}
+.fgrid input,.fgrid select,.fgrid textarea,.fl input,.fl select,.fl textarea{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--fg);font-weight:400;font-size:.95rem;min-width:0}
+.span2{grid-column:1/-1}
+.x{border:0;background:none;font-size:1.4rem;cursor:pointer;color:var(--muted);line-height:1}
+/* Fattura */
+.inv{border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px;font-size:.9rem}
+.inv .top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.inv table td,.inv table th{padding:6px 0}
+.inv .tot td{font-weight:700;border-top:2px solid var(--fg)}
+.inv .legal{font-size:.78rem;color:var(--muted);margin:0}
+.team{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.team .panel{padding:16px;display:flex;flex-direction:column;gap:10px}
+.team .acts{margin-top:auto;display:flex;gap:6px;justify-content:flex-end;border-top:1px solid var(--line);padding-top:10px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches label{flex-direction:row;cursor:pointer}
+.swatches input{position:absolute;opacity:0;pointer-events:none}
+.swatches span{width:28px;height:28px;border-radius:50%;background:var(--pc);display:block;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.swatches input:checked+span{box-shadow:0 0 0 2px var(--fg)}
+.swatches input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.days{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+@media (max-width:560px){.days{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.callout{background:var(--surface-2);border-radius:var(--r);padding:12px 14px;font-size:.88rem;margin:0}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:var(--r);font-weight:700;z-index:60;font-size:.9rem}
+.empty{padding:22px 16px;color:var(--muted)}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;padding:12px 16px;gap:10px;border-right:0;border-bottom:1px solid var(--line);min-width:0}
+  .brand{padding:0}
+  .sedesel{margin-top:0;min-width:0;grid-column:1/-1;order:2;flex-direction:row;align-items:center}
+  .sedesel select{flex:1;min-width:0}
+  .brand{order:0}
+  .me{order:1;margin:0;border:0;padding:0;justify-content:flex-end}
+  .me .who{display:none}
+  .me .acts{flex-direction:row}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(var(--n,5),1fr);gap:0;background:var(--surface);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
+  nav button{flex-direction:column;justify-content:center;gap:2px;padding:6px 2px;font-size:.72rem;position:relative;text-align:center}
+  nav button svg{display:block}
+  nav .lg{display:none} nav .sm{display:inline}
+  nav .badge{position:absolute;top:2px;right:calc(50% - 22px);font-size:.62rem;padding:0 5px;background:var(--bad);color:#fff}
+  main{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+  .list li{flex-wrap:wrap}
+  .list li>.row{margin-left:auto}
+  .stat b{font-size:1.4rem}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .stat{padding:12px}
+  .sheet{align-self:end;border-radius:14px 14px 0 0;max-height:92%}
+  .modal{padding:0;align-items:end}
+  .demo{display:none}
+  .fgrid{grid-template-columns:1fr}
+  h1{font-size:1.45rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.avail{position:absolute;left:0;right:0;background:color-mix(in srgb,var(--pc) 9%,transparent);border-left:3px solid color-mix(in srgb,var(--pc) 55%,transparent);pointer-events:none}
+.avail span{position:absolute;bottom:3px;right:6px;font-size:.62rem;color:var(--pc);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.setup-card{width:min(640px,100%)}
+.steps{display:flex;flex-direction:column;gap:18px}
+.steps fieldset{border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin:0;min-width:0}
+.steps legend{font-family:var(--f-display);font-weight:700;padding:0 6px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline;font-size:inherit}
+.sede-where{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+td.neg{color:var(--bad)}
+</style>
+</head>
+<body>
+
+<!-- ======== Accesso ======== -->
+<div id="login" class="login" hidden>
+  <div class="login-card">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="var(--accent)"/><path d="M9 21c0-5 3.5-9 8-9s8 4 8 9" stroke="var(--on-accent)" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="17" cy="21" r="2.6" fill="var(--on-accent)"/></svg>
+      <div><b>PsicoLogo</b><small>Il gestionale del professionista, in tutti i tuoi studi</small></div>
+    </div>
+    <div><h1>Accedi</h1><p class="muted" style="margin:4px 0 0">Agenda, pazienti, cartelle e fatture in un unico posto.</p></div>
+    <form id="loginForm" novalidate>
+      <label class="fl" for="lgUser">Nome utente<input id="lgUser" name="u" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label class="fl" for="lgPw">Password<span class="pw"><input id="lgPw" name="p" type="password" autocomplete="current-password" required><button type="button" data-act="showPw" aria-controls="lgPw">Mostra</button></span></label>
+      <p id="lgErr" class="err" role="alert" hidden></p>
+      <button class="btn primary">Accedi</button>
+    </form>
+        <p class="muted small" style="margin:0">Connessione cifrata. Dopo 5 tentativi sbagliati l’accesso si blocca per 15 minuti.</p>
+  </div>
+</div>
+
+<!-- ======== Prima configurazione ======== -->
+<div id="setup" class="login" hidden>
+  <div class="login-card setup-card">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="var(--accent)"/><path d="M9 21c0-5 3.5-9 8-9s8 4 8 9" stroke="var(--on-accent)" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="17" cy="21" r="2.6" fill="var(--on-accent)"/></svg>
+      <div><b>PsicoLogo</b><small>Prima configurazione</small></div>
+    </div>
+    <div><h1>Benvenuto</h1><p class="muted" style="margin:4px 0 0">Tre passaggi e sei operativo. Potrai cambiare tutto in seguito dal tuo profilo e dalla pagina Studi.</p></div>
+    <p class="callout" id="setupWarn">Serve il <b>codice di installazione</b> che hai scelto quando hai creato il server: impedisce a chiunque altro di configurare PsicoLogo al posto tuo.</p>
+    <form id="setupForm" class="steps" novalidate>
+      <fieldset class="fgrid"><legend>1 · Chi sei</legend>
+        <label>Professione<select name="professione" id="su-prof"><option value="psicologia">Psicologo/a</option><option value="logopedia">Logopedista</option></select></label>
+        <label>Titolo<select name="titolo" id="su-titolo"><option>Dott.ssa</option><option>Dott.</option><option value="">Nessuno</option></select></label>
+        <label>Nome<input name="nome" id="su-nome" required></label>
+        <label>Cognome<input name="cognome" id="su-cognome" required></label>
+        <label class="span2">Qualifica<input name="qualifica" id="su-qual" placeholder="Es. Psicologa psicoterapeuta"></label>
+        <label class="span2">Iscrizione all’albo<input name="albo" id="su-albo" placeholder="Ordine, sezione e numero"></label>
+        <label>Partita IVA<input name="piva" id="su-piva" inputmode="numeric" maxlength="11"></label>
+        <label>Regime fiscale<select name="regime" id="su-regime"><option value="forfettario">Forfettario</option><option value="ordinario">Ordinario</option></select></label>
+      </fieldset>
+      <fieldset class="fgrid"><legend>2 · Il tuo primo studio</legend>
+        <label>Nome dello studio<input name="snome" id="su-snome" required placeholder="Es. Studio Re di Roma"></label>
+        <label>Indirizzo<input name="sind" id="su-sind" placeholder="Via, città"></label>
+        <p class="span2 muted small" style="margin:0">Altri studi, orari e costi della stanza li aggiungi dopo, dalla pagina Studi.</p>
+      </fieldset>
+      <fieldset class="fgrid"><legend>3 · Il tuo accesso</legend>
+        <label class="span2">Codice di installazione<input name="code" id="su-code" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
+        <label class="span2">Nome utente<input name="username" id="su-user" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="es. n.cognome"></label>
+        <label>Password<input type="password" name="pw1" id="su-pw1" autocomplete="new-password" required placeholder="Almeno 10 caratteri"></label>
+        <label>Ripeti password<input type="password" name="pw2" id="su-pw2" autocomplete="new-password" required></label>
+      </fieldset>
+      <label class="check" style="border:0;padding:0"><input type="checkbox" name="sample" id="su-sample" checked><span><b>Inserisci pazienti e appuntamenti di esempio</b><br><span class="muted small">Utile per provare. Tre studi e dieci pazienti di fantasia, che potrai cancellare.</span></span></label>
+      <p id="suErr" class="err" role="alert" hidden></p>
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="suBtn">Crea il mio gestionale</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- ======== App ======== -->
+<div class="app" hidden>
+  <aside class="side">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="var(--accent)"/><path d="M9 21c0-5 3.5-9 8-9s8 4 8 9" stroke="var(--on-accent)" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="17" cy="21" r="2.6" fill="var(--on-accent)"/></svg>
+      <div><b>PsicoLogo</b><small id="brandSub"></small></div>
+    </div>
+    <label class="sedesel" for="sedeSel">Studio<select id="sedeSel"></select></label>
+    <nav id="nav" aria-label="Sezioni"></nav>
+    <div class="sync" id="sync" role="status">Salvato</div>
+    <div class="me" id="me"></div>
+    <p class="demo">Versione di prova su server. Usa solo dati di fantasia finché il server non è stato verificato.</p>
+  </aside>
+  <main id="main"></main>
+</div>
+<div id="modal" class="modal" hidden><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
+<div id="toast" hidden></div>
+
+<script>
+/* ---------- utilità ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const monday=d=>{const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
+const TODAY=new Date();TODAY.setHours(0,0,0,0);const T=iso(TODAY);
+const GIORNI=['lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica'];
+const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const wd=s=>(parse(s).getDay()+6)%7;
+const fmtLong=s=>{const d=parse(s);return `${GIORNI[wd(s)]} ${d.getDate()} ${MESI[d.getMonth()]}`};
+const fmtD=s=>{const d=parse(s);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`};
+const euro=n=>(n||0).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+const r2=n=>Math.round(n*100)/100;
+const toMin=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
+const hhmm=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`;
+const ageOf=s=>{if(!s)return null;const b=parse(s);let a=TODAY.getFullYear()-b.getFullYear();const m=TODAY.getMonth()-b.getMonth();if(m<0||(m===0&&TODAY.getDate()<b.getDate()))a--;return a};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const initials=p=>((p.nome||'?')[0]+(p.cognome||'?')[0]).toUpperCase();
+const full=p=>`${p.nome} ${p.cognome}`;
+const cap=s=>s.replace(/^./,c=>c.toUpperCase());
+
+/* ---------- professione ---------- */
+const PROF={
+  psicologia:{label:'Psicologo/a',cassa:2,cassaNome:'Contributo integrativo ENPAP 2%',prest:'Seduta di psicoterapia',tariffa:70,tariffaVal:90,
+    tests:['BDI-II','STAI-Y – Ansia di stato e di tratto','SCL-90-R','MMPI-2','PDSS – Panic Disorder Severity Scale','MBI – Maslach Burnout Inventory','WISC-IV','CBCL 6-18','SDAG / SDAI (insegnanti)'],
+    tipi:['Seduta','Primo colloquio','Valutazione','Colloquio genitori']},
+  logopedia:{label:'Logopedista',cassa:4,cassaNome:'Contributo integrativo 4%',prest:'Trattamento logopedico',tariffa:45,tariffaVal:70,
+    tests:['PFLI – Prove di valutazione fonologica','TVL – Test di valutazione del linguaggio','PVB – Primo vocabolario del bambino','Prove MT di lettura','DDE-2 – Batteria dislessia e disortografia','BVN 5-11','AAT – Aachener Aphasie Test','VHI – Voice Handicap Index','Tempo massimo fonatorio'],
+    tipi:['Seduta','Valutazione','Colloquio genitori']}
+};
+const COLORI=['--c1','--c2','--c3','--c4','--c5','--c6'];
+const COSTI={nessuno:'Nessun costo',mese:'Affitto mensile fisso',ora:'Stanza a ore',percentuale:'Percentuale sul compenso'};
+
+/* ---------- dati demo ---------- */
+function seed(){
+  let r=11;const rnd=()=>(r=(r*9301+49297)%233280)/233280;
+  const me={titolo:'Dott.ssa',nome:'Giulia',cognome:'Ferri',professione:'psicologia',qualifica:'Psicologa psicoterapeuta',albo:'Ordine degli Psicologi del Lazio n. 18342',piva:'14820390581',regime:'forfettario',
+    cassa:2,cassaNome:'Contributo integrativo ENPAP 2%',prest:'Seduta di psicoterapia',tariffa:70,tariffaVal:90};
+  const studi=[
+    {id:'s1',nome:'Re di Roma',indirizzo:'Zona Re di Roma, Roma',nota:'Studio privato condiviso con una collega',costo:{tipo:'mese',valore:400},col:'--c1',orari:{0:['14:00','20:00'],2:['09:00','13:00'],3:['14:00','20:00']},attivo:true},
+    {id:'s2',nome:'Ladispoli',indirizzo:'Centro, Ladispoli (RM)',nota:'Poliambulatorio: trattiene una percentuale',costo:{tipo:'percentuale',valore:30},col:'--c3',orari:{1:['15:00','20:00'],4:['14:30','19:00']},attivo:true},
+    {id:'s3',nome:'Valle Aurelia',indirizzo:'Zona Valle Aurelia, Roma',nota:'Stanza prenotata a ore',costo:{tipo:'ora',valore:12},col:'--c2',orari:{2:['15:00','20:00'],5:['09:00','13:00']},attivo:true},
+  ];
+  const P=(nome,cognome,nascita,cf,studioId,slots,extra)=>({id:uid(),nome,cognome,nascita,cf,studioId,slots,tel:'',email:'',tutori:[],invio:'',motivo:'',anamnesi:'',obiettivi:[],consensi:{informato:true,privacy:true,entrambi:true,ts:'ok'},...extra});
+  const y=TODAY.getFullYear();
+  const patients=[
+    P('Chiara','Martini',`${y-34}-11-02`,'MRTCHR..S42H501K','s1',[[0,'18:00']],{tel:'328 551 0942',email:'c.martini@example.it',invio:'Accesso diretto',motivo:'Ansia generalizzata con episodi di insonnia iniziale.',anamnesi:'Project manager. Preoccupazioni persistenti da circa un anno, aumentate dopo un cambio di ruolo. Nessun trattamento farmacologico.',obiettivi:[{t:'Riconoscere i pensieri di preoccupazione e il loro innesco',d:true},{t:'Ridurre l’evitamento nelle riunioni',d:false}]}),
+    P('Riccardo','Marino',`${y-52}-07-30`,'MRNRCR..L30H501M','s1',[[0,'15:00']],{tel:'347 330 8120',invio:'Accesso diretto',motivo:'Stress lavoro-correlato, sintomi di esaurimento.',anamnesi:'Dirigente nella logistica. Irritabilità, stanchezza persistente, difficoltà a staccare dal lavoro.',obiettivi:[{t:'Definire confini tra lavoro e vita privata',d:false}],consensi:{informato:false,privacy:true,entrambi:true,ts:'ok'}}),
+    P('Alessandro','De Luca',`${y-41}-09-15`,'DLCLSN..P15H501W','s1',[[3,'19:00']],{tel:'329 007 3321',invio:'Medico di medicina generale',motivo:'Disturbo dell’adattamento dopo un lutto.',anamnesi:'Perdita del padre a inizio anno. Ritiro sociale e calo di concentrazione al lavoro.',obiettivi:[{t:'Elaborazione del lutto',d:false}],consensi:{informato:true,privacy:true,entrambi:true,ts:'opposizione'}}),
+    P('Sofia','Marchi',`${y-31}-01-22`,'MRCSFO..A62H501E','s1',[[2,'10:00']],{tel:'338 712 4409',invio:'Accesso diretto',motivo:'Difficoltà relazionali e bassa autostima.',anamnesi:'Lavora come educatrice. Riferisce relazioni sentimentali vissute con forte dipendenza affettiva.',obiettivi:[{t:'Riconoscere i propri bisogni nella relazione',d:false}]}),
+    P('Anna','Costa',`${y-58}-06-03`,'CSTNNA..H43H501G','s1',[[3,'16:00']],{tel:'06 7788 2310',invio:'Psichiatra',motivo:'Sostegno durante il pensionamento e umore deflesso.',anamnesi:'Ex insegnante, in pensione da pochi mesi. In terapia farmacologica seguita dallo psichiatra.',obiettivi:[{t:'Costruire una nuova routine settimanale',d:true}]}),
+    P('Tommaso','Greco',`${y-9}-06-21`,'GRCTMS..H21H501P','s2',[[1,'17:00']],{tel:'340 922 1187',tutori:[{nome:'Laura Neri',rel:'Madre',tel:'340 922 1187'},{nome:'Davide Greco',rel:'Padre',tel:'333 870 4412'}],invio:'Neuropsichiatria infantile',motivo:'Difficoltà di attenzione e di regolazione emotiva a scuola.',anamnesi:'Quarta primaria. Difficoltà a mantenere l’attenzione nei compiti lunghi. Genitori separati, affido condiviso.',obiettivi:[{t:'Strategie di autoregolazione nei momenti di frustrazione',d:false},{t:'Incontro di restituzione con gli insegnanti',d:false}]}),
+    P('Lorenzo','Villa',`${y-45}-03-12`,'VLLLRN..C12H501F','s2',[[1,'18:30']],{tel:'331 440 9981',invio:'Accesso diretto',motivo:'Attacchi d’ira e conflitti familiari.',anamnesi:'Padre di due figli. Riferisce reazioni impulsive in famiglia, peggiorate negli ultimi mesi.',obiettivi:[{t:'Riconoscere i segnali precoci della rabbia',d:false}]}),
+    P('Martina','Colombo',`${y-15}-04-05`,'CLMMTN..D45H501R','s2',[[4,'15:00']],{tel:'338 440 1276',tutori:[{nome:'Roberta Colombo',rel:'Madre',tel:'338 440 1276'},{nome:'Stefano Colombo',rel:'Padre',tel:''}],invio:'Accesso diretto',motivo:'Ansia scolastica e calo del rendimento.',anamnesi:'Secondo anno di liceo. Evita le interrogazioni orali, lamenta mal di pancia la mattina.',obiettivi:[{t:'Gestione dell’ansia prima delle verifiche',d:false}],consensi:{informato:true,privacy:true,entrambi:false,ts:'ok'}}),
+    P('Valerio','Santoro',`${y-38}-05-03`,'SNTVLR..E03H501N','s3',[[2,'17:30']],{tel:'331 204 7789',invio:'Accesso diretto',motivo:'Attacchi di panico sui mezzi pubblici.',anamnesi:'Primo episodio circa otto mesi fa. Si sposta solo in auto. Nessuna patologia organica rilevata.',obiettivi:[{t:'Psicoeducazione sul ciclo del panico',d:true},{t:'Esposizione graduale ai mezzi pubblici',d:false}]}),
+    P('Giulia','Pace',`${y-12}-08-22`,'PCAGLI..M62H501S','s3',[[5,'10:00']],{tel:'340 118 6632',tutori:[{nome:'Monica Russo',rel:'Madre',tel:'340 118 6632'},{nome:'Fabio Pace',rel:'Padre',tel:'392 774 1150'}],invio:'Scuola secondaria di primo grado',motivo:'Difficoltà di inserimento alla scuola media.',anamnesi:'Prima media. Ritiro nei momenti non strutturati, si sente esclusa dal gruppo classe.',obiettivi:[{t:'Rinforzo delle abilità sociali',d:false}]}),
+  ];
+  const appts=[],notes=[],tests=[],invoices=[];
+  const W0=monday(TODAY);
+  const noteTxt=['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
+  patients.forEach(p=>{
+    for(let w=-5;w<=2;w++){
+      p.slots.forEach(([d,t])=>{
+        const date=iso(addDays(W0,w*7+d));
+        let status='prenotato';
+        if(date<T){const x=rnd();status=x<.07?'assente':x<.13?'disdetto':'svolto'}
+        const type=w===-5?'Primo colloquio':'Seduta';
+        appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date,start:t,dur:50,type,status,invoiceId:null});
+      });
+    }
+    if(p.tutori.length){const d=p.slots[0][0];appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date:iso(addDays(W0,-14+d)),start:hhmm(toMin(p.slots[0][1])+60),dur:50,type:'Colloquio genitori',status:'svolto',invoiceId:null})}
+  });
+  appts.filter(a=>a.status==='svolto'&&a.date>=iso(addDays(W0,-21))).forEach((a,i)=>{
+    if(a.date>=iso(addDays(W0,-7))&&i%4===0)return;
+    notes.push({id:uid(),patientId:a.patientId,apptId:a.id,date:a.date,text:noteTxt[i%3]});
+  });
+  const groups={};
+  appts.filter(a=>(a.status==='svolto'||a.status==='assente')&&a.date<iso(W0)).forEach(a=>{
+    const pi=patients.findIndex(p=>p.id===a.patientId);
+    if(pi%3===0&&a.date>=iso(addDays(W0,-7)))return;
+    const k=a.patientId+'|'+a.date.slice(0,7);(groups[k]=groups[k]||[]).push(a);
+  });
+  const db={me,studi,patients,appts,notes,tests,invoices};
+  Object.values(groups).sort((a,b)=>a.at(-1).date.localeCompare(b.at(-1).date)).forEach(list=>{
+    const inv=makeInvoice(db,patients.find(p=>p.id===list[0].patientId),list,list.at(-1).date);
+    inv.paid=inv.date<iso(addDays(W0,-10))||rnd()<.4;invoices.push(inv);
+  });
+  const d0=iso(addDays(W0,-35));
+  const tt=(i,name,result)=>tests.push({id:uid(),patientId:patients[i].id,date:d0,name,result});
+  tt(0,'STAI-Y – Ansia di stato e di tratto','Tratto: 58 (elevato) · Stato: 52');tt(0,'BDI-II','Punteggio 11 – minimo');
+  tt(1,'MBI – Maslach Burnout Inventory','Esaurimento emotivo alto; depersonalizzazione media');
+  tt(5,'SDAG / SDAI (insegnanti)','Disattenzione sopra soglia; iperattività nella norma');tt(5,'CBCL 6-18','Problemi di attenzione: area borderline');
+  tt(8,'PDSS – Panic Disorder Severity Scale','Punteggio 14 – moderato');
+  patients.forEach(p=>delete p.slots);
+  return db;
+}
+function emptyDB(me,studio){return {me,studi:[studio],patients:[],appts:[],notes:[],tests:[],invoices:[]}}
+
+/* ---------- tariffe e fatture ---------- */
+const priceOf=(a,me)=>a.type==='Valutazione'?me.tariffaVal:me.tariffa;
+const lineOf=(a,me)=>({apptId:a.id,desc:`${a.type==='Seduta'?me.prest:a.type} del ${fmtD(a.date)}${a.status==='assente'?' (assenza non disdettata)':''}`,amount:priceOf(a,me)});
+function calcInv(lines,cassa){const imp=r2(lines.reduce((s,l)=>s+l.amount,0));const contr=r2(imp*cassa/100);const sub=r2(imp+contr);const bollo=sub>77.47?2:0;return{imp,contr,bollo,tot:r2(sub+bollo)}}
+function makeInvoice(db,pat,list,date){
+  const me=db.me;const n=db.invoices.filter(i=>i.date.slice(0,4)===date.slice(0,4)).length+1;
+  const lines=list.map(a=>lineOf(a,me));
+  const inv={id:uid(),num:`${n}/${date.slice(0,4)}`,date,patientId:pat.id,studioId:list[0].studioId,lines,cassa:me.cassa,cassaNome:me.cassaNome,regime:me.regime,...calcInv(lines,me.cassa),paid:false,ts:pat.consensi.ts!=='opposizione'};
+  list.forEach(a=>a.invoiceId=inv.id);
+  return inv;
+}
+
+/* ---------- stato ---------- */
+let DB=null,VER=0,USERNAME='';
+/* ---------- comunicazione con il server ---------- */
+async function api(url,opts={}){
+  const r=await fetch(url,{method:opts.method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json','X-PsicoLogo':'1'},body:opts.body?JSON.stringify(opts.body):undefined});
+  let j={};try{j=await r.json()}catch(e){}
+  if(!r.ok){const e=new Error(j.error||`Errore ${r.status}`);e.status=r.status;e.body=j;throw e}
+  return j;
+}
+async function loadData(){const r=await api('/api/data');DB=r.data;VER=r.version;USERNAME=r.username}
+const setSync=(t,cls='')=>{const el=$('#sync');if(el){el.textContent=t;el.className='sync '+cls}};
+let dirty=false,saving=false,saveTimer=null;
+function save(){dirty=true;setSync('Salvataggio…','busy');clearTimeout(saveTimer);saveTimer=setTimeout(flush,500)}
+async function flush(){
+  if(saving||!dirty)return;saving=true;dirty=false;
+  try{const r=await api('/api/data',{method:'PUT',body:{version:VER,data:DB}});VER=r.version;setSync('Salvato')}
+  catch(e){
+    if(e.status===409){DB=e.body.data;VER=e.body.version;render();setSync('Aggiornato');toast('I dati erano stati modificati da un altro dispositivo: ho caricato la versione più recente. Ripeti l’ultima modifica.')}
+    else if(e.status===401){showLogin('La sessione è scaduta: accedi di nuovo. L’ultima modifica non è stata salvata.')}
+    else{dirty=true;setSync('Non salvato · riprovo','err');setTimeout(flush,5000)}
+  }finally{saving=false;if(dirty)flush()}
+}
+window.addEventListener('beforeunload',e=>{if(dirty||saving){e.preventDefault();e.returnValue=''}});
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState!=='visible'||!S.logged||dirty||saving||!$('#modal').hidden)return;
+  try{const r=await api('/api/data');if(r.version!==VER){DB=r.data;VER=r.version;render()}}catch(e){if(e.status===401)showLogin('La sessione è scaduta: accedi di nuovo.')}
+});
+const MQ=matchMedia('(max-width:760px)');
+const S={view:'oggi',day:null,studio:'tutti',week:0,filter:null,q:'',pid:null,ptab:'anagrafica',invFilter:'tutte',logged:false};
+const pat=id=>DB.patients.find(p=>p.id===id);
+const studio=id=>DB.studi.find(s=>s.id===id)||{nome:'—',col:'--c6',orari:{},costo:{tipo:'nessuno',valore:0}};
+const activeStudi=()=>DB.studi.filter(s=>s.attivo!==false);
+const inStudio=x=>S.studio==='tutti'||x.studioId===S.studio;
+const P_=()=>PROF[DB.me.professione]||PROF.psicologia;
+const meName=()=>[DB.me.titolo,DB.me.nome,DB.me.cognome].filter(Boolean).join(' ');
+const consensoOk=p=>p.consensi.informato&&p.consensi.privacy&&(ageOf(p.nascita)>=18||p.consensi.entrambi);
+const billable=a=>(a.status==='svolto'||a.status==='assente');
+const unbilled=()=>DB.appts.filter(a=>billable(a)&&!a.invoiceId&&a.date<=T&&inStudio(a));
+const STATI={prenotato:['Prenotato',''],svolto:['Svolto','good'],assente:['Assente','warn'],disdetto:['Disdetto','bad']};
+const stChip=s=>`<span class="chip ${STATI[s][1]}">${STATI[s][0]}</span>`;
+const sCol=id=>`--pc:var(${studio(id).col})`;
+const studioChip=id=>`<span class="chip sede" style="${sCol(id)}"><span class="dot"></span>${esc(studio(id).nome)}</span>`;
+// in quale studio sei in quel giorno/ora (in base agli orari)
+function studiDelGiorno(date){const g=wd(date);return activeStudi().filter(s=>s.orari[g]).sort((a,b)=>a.orari[g][0].localeCompare(b.orari[g][0]))}
+function studioAt(date,time){const m=toMin(time);return studiDelGiorno(date).find(s=>{const[o,c]=s.orari[wd(date)];return m>=toMin(o)&&m<toMin(c)})||null}
+
+/* ---------- accesso ---------- */
+function screen(name){$('#login').hidden=name!=='login';$('#setup').hidden=name!=='setup';$('.app').hidden=name!=='app'}
+function enterApp(){S.logged=true;S.view='oggi';S.pid=null;S.q='';S.studio='tutti';S.filter=null;screen('app');setSync('Salvato');render();window.scrollTo(0,0)}
+function showLogin(msg){S.logged=false;DB=null;dirty=false;close();screen('login');
+  $('#lgPw').value='';const err=$('#lgErr');err.textContent=msg||'';err.hidden=!msg;$('#lgUser').focus();}
+function showSetup(){close();screen('setup');$('#suErr').hidden=true;window.scrollTo(0,0)}
+
+/* ---------- navigazione ---------- */
+const VIEWS=[['oggi','Oggi','Oggi','M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 5 5M19 19l-1.3-1.3M17.7 6.3 19 5M5 19l1.3-1.3M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'],['agenda','Agenda','Agenda','M4 6h16v14H4zM4 10h16M9 3v4M15 3v4'],['pazienti','Pazienti','Pazienti','M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6'],['fatture','Fatturazione','Fatture','M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6'],['studi','I miei studi','Studi','M3 21h18M5 21V8l7-5 7 5v13M10 21v-5h4v5']];
+const ico=d=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+function renderNav(){
+  const nb=unbilled().length;
+  $('#nav').style.setProperty('--n',VIEWS.length);
+  $('#nav').innerHTML=VIEWS.map(([k,l,sh,ic])=>`<button data-act="go" data-v="${k}" ${S.view===k||(k==='pazienti'&&S.view==='paziente')?'aria-current="page"':''}>${ico(ic)}<span class="lg">${l}</span><span class="sm">${sh}</span>${k==='fatture'&&nb?`<span class="badge" title="Sedute da fatturare">${nb}</span>`:''}</button>`).join('');
+  if(S.studio!=='tutti'&&!activeStudi().some(s=>s.id===S.studio))S.studio='tutti';
+  $('#sedeSel').innerHTML=`<option value="tutti">Tutti gli studi</option>`+activeStudi().map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('');
+  $('#sedeSel').value=S.studio;
+  const n=activeStudi().length;$('#brandSub').textContent=`${n} ${n===1?'studio':'studi'} · ${P_().label.toLowerCase()}`;
+  $('#me').innerHTML=`<div class="avatar" style="--pc:var(--accent)">${initials(DB.me)}</div><div class="who"><b>${esc(DB.me.nome+' '+DB.me.cognome)}</b><small>${esc(DB.me.qualifica||P_().label)}</small></div><div class="acts"><button data-act="go" data-v="profilo">Profilo</button><button data-act="logout">Esci</button></div>`;
+}
+function render(){if(!S.logged||!DB)return;renderNav();const m=$('#main');if(S.view==='profilo')setTimeout(loadAudit,0);m.innerHTML=({profilo:vProfile,oggi:vToday,agenda:vAgenda,pazienti:vPatients,paziente:vPatient,fatture:vBilling,studi:vStudi})[S.view]();if(S.view==='agenda')placeNow()}
+
+/* ---------- Oggi ---------- */
+function vToday(){
+  const today=DB.appts.filter(a=>a.date===T&&inStudio(a)).sort((a,b)=>a.start.localeCompare(b.start));
+  const W0=iso(monday(TODAY)),W1=iso(addDays(monday(TODAY),6));
+  const week=DB.appts.filter(a=>a.date>=W0&&a.date<=W1&&inStudio(a)&&a.status!=='disdetto');
+  const ub=unbilled();const ubTot=ub.reduce((s,a)=>s+priceOf(a,DB.me),0);
+  const ym=T.slice(0,7);const incassato=DB.invoices.filter(i=>i.paid&&i.date.slice(0,7)===ym&&inStudio(i)).reduce((s,i)=>s+i.tot,0);
+  const noCons=DB.patients.filter(p=>inStudio(p)&&!consensoOk(p));
+  const lim=iso(addDays(TODAY,-14));
+  const noNote=DB.appts.filter(a=>inStudio(a)&&a.status==='svolto'&&a.date>=lim&&a.date<=T&&!DB.notes.some(n=>n.apptId===a.id));
+  const unpaid=DB.invoices.filter(i=>!i.paid&&inStudio(i));
+  const where=studiDelGiorno(T);
+  return `<div class="head"><div><div class="eyebrow">${S.studio==='tutti'?'Tutti gli studi':esc(studio(S.studio).nome)}</div><h1>${cap(fmtLong(T))}</h1>
+    <div class="sede-where">${where.length?where.map(s=>`<span class="chip sede" style="${sCol(s.id)}"><span class="dot"></span>${esc(s.nome)} · ${s.orari[wd(T)].join('–')}</span>`).join(''):'<span class="muted">Oggi non hai orari di studio.</span>'}</div></div>
+    <button class="btn primary" data-act="newAppt">Nuovo appuntamento</button></div>
+  <div class="stats">
+    <div class="stat"><span>Appuntamenti oggi</span><b>${today.filter(a=>a.status!=='disdetto').length}</b></div>
+    <div class="stat"><span>Sedute questa settimana</span><b>${week.length}</b></div>
+    <div class="stat"><span>Da fatturare (${ub.length})</span><b>${euro(ubTot)}</b></div>
+    <div class="stat"><span>Incassato a ${MESI[TODAY.getMonth()]}</span><b>${euro(incassato)}</b></div>
+  </div>
+  <div class="two">
+    <section class="panel"><header><h2>Appuntamenti di oggi</h2><button class="btn ghost small" data-act="go" data-v="agenda">Apri agenda</button></header>
+      ${today.length?`<ul class="list">${today.map(a=>{const p=pat(a.patientId);return `<li style="${sCol(a.studioId)}">
+        <span class="tl-time">${a.start}</span><span class="dot"></span>
+        <div class="grow"><a href="#" data-act="openPt" data-id="${p.id}"><b>${esc(full(p))}</b></a><div class="muted" style="font-size:.85rem">${a.type} · ${esc(studio(a.studioId).nome)}</div></div>
+        ${a.status==='prenotato'?`<div class="row"><button class="btn small" data-act="status" data-id="${a.id}" data-v="svolto">Svolto</button><button class="btn small" data-act="status" data-id="${a.id}" data-v="assente">Assente</button></div>`:stChip(a.status)}
+      </li>`}).join('')}</ul>`:`<p class="empty">Nessun appuntamento oggi. <button class="linkbtn" data-act="newAppt">Prenotane uno</button></p>`}
+    </section>
+    <section class="panel"><header><h2>Da sistemare</h2></header>
+      <ul class="list">
+        ${noCons.map(p=>`<li><span class="chip warn">Consenso</span><div class="grow"><a href="#" data-act="openPt" data-id="${p.id}" data-tab="consensi">${esc(full(p))}</a><div class="muted" style="font-size:.82rem">${!p.consensi.informato?'Consenso informato non firmato':!p.consensi.privacy?'Informativa privacy non firmata':'Manca la firma del secondo genitore'}</div></div></li>`).join('')}
+        ${noNote.map(a=>`<li><span class="chip">Nota</span><div class="grow"><a href="#" data-act="note" data-id="${a.id}">${esc(full(pat(a.patientId)))}</a><div class="muted" style="font-size:.82rem">Diario mancante per la seduta del ${fmtD(a.date)}</div></div></li>`).join('')}
+        ${ub.length?`<li><span class="chip">Fatture</span><div class="grow"><a href="#" data-act="go" data-v="fatture">${ub.length} ${ub.length>1?'prestazioni':'prestazione'} da fatturare</a></div></li>`:''}
+        ${unpaid.slice(0,4).map(i=>`<li><span class="chip bad">Incasso</span><div class="grow"><a href="#" data-act="inv" data-id="${i.id}">Fattura ${i.num} · ${esc(full(pat(i.patientId)))}</a><div class="muted" style="font-size:.82rem">${euro(i.tot)} dal ${fmtD(i.date)}</div></div></li>`).join('')}
+        ${!noCons.length&&!noNote.length&&!ub.length&&!unpaid.length?'<li class="muted">Tutto in ordine.</li>':''}
+      </ul>
+    </section>
+  </div>`;
+}
+
+/* ---------- Agenda ---------- */
+const H0=8,H1=21,PX=54;
+function vAgenda(){
+  if(!S.filter)S.filter=activeStudi().map(s=>s.id);
+  const W=addDays(monday(TODAY),S.week*7);const week=[...Array(6)].map((_,i)=>iso(addDays(W,i)));
+  const narrow=MQ.matches;
+  if(!S.day||!week.includes(S.day))S.day=week.includes(T)?T:week[0];
+  const days=narrow?[S.day]:week;
+  const vis=a=>S.filter.includes(a.studioId)&&inStudio(a);
+  const ev=DB.appts.filter(a=>days.includes(a.date)&&vis(a));
+  const endD=parse(week[5]);
+  const cols=days.map(d=>{
+    const list=ev.filter(a=>a.date===d).sort((a,b)=>toMin(a.start)-toMin(b.start));
+    let cluster=[],end=0;const out=[];
+    const flush=()=>{const lanes=[];cluster.forEach(a=>{let l=lanes.findIndex(e=>e<=toMin(a.start));if(l<0){l=lanes.length;lanes.push(0)}lanes[l]=toMin(a.start)+a.dur;a._l=l});cluster.forEach(a=>a._n=lanes.length);out.push(...cluster);cluster=[]};
+    list.forEach(a=>{if(cluster.length&&toMin(a.start)>=end)flush();cluster.push(a);end=Math.max(end,toMin(a.start)+a.dur)});flush();
+    const av=studiDelGiorno(d).filter(s=>S.filter.includes(s.id)&&(S.studio==='tutti'||s.id===S.studio)).map(s=>{const[o,c]=s.orari[wd(d)];const top=Math.max(0,(toMin(o)-H0*60)/60*PX),h=Math.min((H1-H0)*PX,(toMin(c)-H0*60)/60*PX)-top;return `<div class="avail" style="${sCol(s.id)};top:${top}px;height:${h}px"><span>${esc(s.nome)}</span></div>`}).join('');
+    return `<div class="daycol ${d===T?'today':''}" data-act="slot" data-d="${d}">${av}${d===T?'<div class="now" id="now" hidden></div>':''}${out.map(a=>{const p=pat(a.patientId),top=(toMin(a.start)-H0*60)/60*PX,h=a.dur/60*PX-2,w=100/a._n;
+      return `<div class="ev ${a.status}" data-act="appt" data-id="${a.id}" style="${sCol(a.studioId)};top:${top}px;height:${h}px;left:calc(${a._l*w}% + 3px);width:calc(${w}% - 6px)" title="${esc(full(p))} · ${a.start} · ${esc(studio(a.studioId).nome)} · ${STATI[a.status][0]}"><b>${esc(p.cognome)} ${esc(p.nome[0])}.</b><span class="t">${a.start} · ${a.type==='Seduta'?esc(studio(a.studioId).nome):a.type}</span></div>`}).join('')}</div>`}).join('');
+  const hours=[...Array(H1-H0)].map((_,i)=>`<span style="top:${i*PX}px">${pad(H0+i)}:00</span>`).join('');
+  return `<div class="head"><div><div class="eyebrow">Settimana · ${S.studio==='tutti'?'tutti gli studi':esc(studio(S.studio).nome)}</div><h1>${W.getDate()} ${MESI[W.getMonth()].slice(0,3)} – ${endD.getDate()} ${MESI[endD.getMonth()].slice(0,3)} ${endD.getFullYear()}</h1></div>
+    <div class="row"><button class="btn" data-act="wk" data-v="-1" aria-label="Settimana precedente">‹</button><button class="btn" data-act="wk" data-v="0">Oggi</button><button class="btn" data-act="wk" data-v="1" aria-label="Settimana successiva">›</button><button class="btn primary" data-act="newAppt">Nuovo appuntamento</button></div></div>
+  ${S.studio==='tutti'&&activeStudi().length>1?`<div class="pills">${activeStudi().map(s=>`<button class="pill" data-act="flt" data-id="${s.id}" aria-pressed="${S.filter.includes(s.id)}" style="${sCol(s.id)}"><span class="dot"></span>${esc(s.nome)}</button>`).join('')}<span class="muted" style="font-size:.8rem;align-self:center">Le fasce colorate sono i tuoi orari in ciascuno studio. Clicca su uno spazio per prenotare.</span></div>`:''}
+  ${narrow?`<div class="daystrip">${week.map(d=>`<button data-act="day" data-v="${d}" aria-pressed="${d===S.day}" class="${d===T?'today':''}"><span>${GIORNI[wd(d)].slice(0,3)}</span><b>${parse(d).getDate()}</b></button>`).join('')}</div>`:''}
+  <div class="cal-wrap"><div class="cal" style="--h:${(H1-H0)*PX}px;--hp:${PX}px;${narrow?'grid-template-columns:48px minmax(0,1fr);min-width:0':''}">
+    <div class="dh" style="border-left:0"></div>
+    ${days.map(d=>{const x=parse(d);const w=studiDelGiorno(d);return `<div class="dh ${d===T?'today':''}"><b>${x.getDate()}</b>${GIORNI[wd(d)].slice(0,3)}<div class="muted" style="font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.length?w.map(s=>esc(s.nome)).join(' · '):'libero'}</div></div>`}).join('')}
+    <div class="gut">${hours}</div>${cols}
+  </div></div>`;
+}
+function placeNow(){const n=$('#now');if(!n)return;const d=new Date(),m=d.getHours()*60+d.getMinutes();if(m<H0*60||m>H1*60)return;n.style.top=((m-H0*60)/60*PX)+'px';n.hidden=false}
+
+/* ---------- Pazienti ---------- */
+function vPatients(){
+  const q=S.q.toLowerCase();
+  const all=DB.patients.filter(inStudio);
+  const list=all.filter(p=>!q||full(p).toLowerCase().includes(q)||(p.cf||'').toLowerCase().includes(q)).sort((a,b)=>a.cognome.localeCompare(b.cognome));
+  const next=p=>DB.appts.filter(a=>a.patientId===p.id&&a.date>=T&&a.status==='prenotato').sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start))[0];
+  return `<div class="head"><div><div class="eyebrow">${all.length} in carico · ${S.studio==='tutti'?'tutti gli studi':esc(studio(S.studio).nome)}</div><h1>Pazienti</h1></div><button class="btn primary" data-act="newPt">Nuovo paziente</button></div>
+  ${DB.patients.length?`<div class="row"><input type="search" id="q" class="field" placeholder="Cerca per nome o codice fiscale" value="${esc(S.q)}" style="flex:1 1 240px"></div>
+  <div class="panel tbl-wrap"><table><thead><tr><th>Paziente</th><th>Età</th><th>Studio</th><th>Prossimo appuntamento</th><th>Documenti</th></tr></thead><tbody>
+  ${list.map(p=>{const n=next(p),a=ageOf(p.nascita);return `<tr class="click" data-act="openPt" data-id="${p.id}"><td><b>${esc(p.cognome)} ${esc(p.nome)}</b>${a<18?' <span class="chip">minore</span>':''}</td><td class="num">${a??'—'}</td><td>${studioChip(p.studioId)}</td><td>${n?`${fmtLong(n.date)}, ${n.start}${n.studioId!==p.studioId?` <span class="muted">(${esc(studio(n.studioId).nome)})</span>`:''}`:'<span class="muted">—</span>'}</td><td>${consensoOk(p)?'<span class="chip good">Completi</span>':'<span class="chip warn">Da completare</span>'}</td></tr>`}).join('')||`<tr><td colspan="5" class="empty">Nessun paziente trovato.</td></tr>`}
+  </tbody></table></div>`:`<section class="panel"><div class="body"><h2>Nessun paziente ancora</h2><p class="muted" style="max-width:60ch">Aggiungi il primo paziente: anagrafica, genitori per i minori e motivo della richiesta. Dalla scheda potrai raccogliere i consensi e prenotare le sedute.</p><button class="btn primary" data-act="newPt">Aggiungi il primo paziente</button></div></section>`}`;
+}
+const PTABS=[['anagrafica','Anagrafica'],['cartella','Cartella clinica'],['diario','Diario sedute'],['valutazioni','Test e valutazioni'],['consensi','Consensi e privacy'],['appuntamenti','Appuntamenti'],['fatture','Fatture']];
+function vPatient(){
+  const p=pat(S.pid);if(!p){S.view='pazienti';return vPatients()}
+  const a=ageOf(p.nascita);
+  return `<div><button class="btn ghost small" data-act="go" data-v="pazienti">‹ Tutti i pazienti</button></div>
+  <div class="phead" style="--pc:var(--accent)"><div class="avatar">${initials(p)}</div><div class="grow"><h1>${esc(full(p))}</h1>
+    <div class="row" style="margin-top:4px">${studioChip(p.studioId)}<span class="muted">${a??'—'} anni${p.cf?` · <span class="mono">${esc(p.cf)}</span>`:''}</span></div></div>
+    <div class="row"><button class="btn" data-act="newAppt" data-p="${p.id}">Prenota</button><button class="btn primary" data-act="note" data-p="${p.id}">Nuova nota</button></div></div>
+  <div class="tabs" role="tablist">${PTABS.map(([k,l])=>`<button role="tab" data-act="ptab" data-v="${k}" aria-selected="${S.ptab===k}">${l}</button>`).join('')}</div>
+  <section class="panel">${({anagrafica:tAnag,cartella:tCart,diario:tDiario,valutazioni:tTest,consensi:tCons,appuntamenti:tAppts,fatture:tInv})[S.ptab](p)}</section>`;
+}
+function tAnag(p){
+  return `<header><h2>Dati anagrafici</h2><button class="btn small" data-act="editPt">Modifica</button></header><div class="body"><dl class="kv">
+    <dt>Data di nascita</dt><dd>${p.nascita?`${fmtD(p.nascita)} (${ageOf(p.nascita)} anni)`:'—'}</dd><dt>Codice fiscale</dt><dd class="mono">${esc(p.cf)||'—'}</dd>
+    <dt>Telefono</dt><dd>${esc(p.tel)||'—'}</dd><dt>Email</dt><dd>${esc(p.email)||'—'}</dd>
+    <dt>Inviato da</dt><dd>${esc(p.invio)||'—'}</dd><dt>Studio abituale</dt><dd>${esc(studio(p.studioId).nome)}</dd>
+    ${p.tutori.map(t=>`<dt>${esc(t.rel)}</dt><dd>${esc(t.nome)}${t.tel?` · ${esc(t.tel)}`:''}</dd>`).join('')}
+  </dl></div>`;
+}
+function tCart(p){
+  return `<header><h2>Cartella clinica</h2></header><div class="body" style="display:flex;flex-direction:column;gap:16px">
+    <div><div class="eyebrow">Motivo della richiesta</div><p style="margin:4px 0 0;max-width:70ch">${esc(p.motivo)||'<span class="muted">Non indicato</span>'}</p></div>
+    <label class="fl" for="anam">Anamnesi<textarea id="anam">${esc(p.anamnesi)}</textarea></label>
+    <div><button class="btn small" data-act="saveAnam">Salva anamnesi</button></div>
+    <div><div class="eyebrow">Obiettivi del progetto terapeutico</div>
+      ${p.obiettivi.map((o,i)=>`<label class="goal ${o.d?'done':''}"><input type="checkbox" data-act="goal" data-i="${i}" ${o.d?'checked':''}><span>${esc(o.t)}</span></label>`).join('')||'<p class="muted small" style="margin:4px 0">Nessun obiettivo ancora.</p>'}
+      <form class="row" data-form="goal" style="margin-top:6px"><input class="field" id="goalTxt" name="t" placeholder="Nuovo obiettivo" required style="flex:1 1 220px"><button class="btn small">Aggiungi</button></form></div>
+  </div>`;
+}
+function tDiario(p){
+  const ns=DB.notes.filter(n=>n.patientId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
+  return `<header><h2>Diario delle sedute</h2><button class="btn small primary" data-act="note" data-p="${p.id}">Nuova nota</button></header>
+  ${ns.map(n=>{const a=DB.appts.find(x=>x.id===n.apptId);return `<div class="note"><div class="row"><b>${fmtLong(n.date)}</b>${a?studioChip(a.studioId):''}</div><p>${esc(n.text)}</p></div>`}).join('')||'<p class="empty">Nessuna nota. Le note si collegano alla seduta svolta.</p>'}`;
+}
+function tTest(p){
+  const ts=DB.tests.filter(t=>t.patientId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
+  return `<header><h2>Test e valutazioni</h2></header>
+  <div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Strumento</th><th>Esito</th></tr></thead><tbody>
+  ${ts.map(t=>`<tr><td class="num">${fmtD(t.date)}</td><td><b>${esc(t.name)}</b></td><td>${esc(t.result)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">Nessuna valutazione registrata.</td></tr>'}</tbody></table></div>
+  <form class="body fgrid" data-form="test" style="border-top:1px solid var(--line)">
+    <label>Strumento<input name="name" id="tName" list="tlist" required placeholder="Scegli o scrivi"></label><datalist id="tlist">${P_().tests.map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
+    <label>Data<input type="date" name="date" id="tDate" value="${T}" required></label>
+    <label class="span2">Esito e punteggi<input name="result" id="tRes" required placeholder="Es. percentile, punteggio, fascia"></label>
+    <div class="span2"><button class="btn primary small">Registra valutazione</button></div></form>`;
+}
+function tCons(p){
+  const c=p.consensi,min=ageOf(p.nascita)<18;
+  const row=(k,t,d)=>`<label class="check"><input type="checkbox" data-act="cons" data-k="${k}" ${c[k]?'checked':''}><span><b>${t}</b><br><span class="muted" style="font-size:.85rem">${d}</span></span></label>`;
+  return `<header><h2>Consensi e privacy</h2>${consensoOk(p)?'<span class="chip good">Completi</span>':'<span class="chip warn">Da completare</span>'}</header><div class="body">
+    ${row('informato','Consenso informato al trattamento','Firmato prima dell’inizio della presa in carico.')}
+    ${row('privacy','Informativa privacy (art. 13 GDPR)','Trattamento di dati relativi alla salute ai sensi dell’art. 9 GDPR.')}
+    ${min?row('entrambi','Firma di entrambi gli esercenti la responsabilità genitoriale','Per i minori serve il consenso di tutti gli esercenti la responsabilità genitoriale.'):''}
+    <label class="check"><input type="checkbox" data-act="ts" ${c.ts==='opposizione'?'checked':''}><span><b>Opposizione all’invio al Sistema Tessera Sanitaria</b><br><span class="muted" style="font-size:.85rem">Se attiva, le spese di questo paziente non vengono trasmesse per la dichiarazione precompilata.</span></span></label>
+  </div>`;
+}
+function tAppts(p){
+  const as=DB.appts.filter(a=>a.patientId===p.id).sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+  return `<header><h2>Appuntamenti</h2><button class="btn small" data-act="newAppt" data-p="${p.id}">Prenota</button></header><div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Ora</th><th>Tipo</th><th>Studio</th><th>Stato</th><th>Fattura</th></tr></thead><tbody>
+  ${as.map(a=>`<tr class="click" data-act="appt" data-id="${a.id}"><td>${fmtLong(a.date)}</td><td class="num">${a.start}</td><td>${a.type}</td><td>${esc(studio(a.studioId).nome)}</td><td>${stChip(a.status)}</td><td>${a.invoiceId?`<span class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</span>`:billable(a)&&a.date<=T?'<span class="chip warn">Da fatturare</span>':''}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nessun appuntamento.</td></tr>'}
+  </tbody></table></div>`;
+}
+function tInv(p){
+  const is=DB.invoices.filter(i=>i.patientId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
+  const ub=DB.appts.filter(a=>a.patientId===p.id&&billable(a)&&!a.invoiceId&&a.date<=T);
+  return `<header><h2>Fatture</h2>${ub.length?`<button class="btn small primary" data-act="newInv" data-p="${p.id}">Fattura ${ub.length} ${ub.length>1?'prestazioni':'prestazione'}</button>`:''}</header>${invTable(is,false)}`;
+}
+function invTable(is,showPt=true){
+  return `<div class="tbl-wrap"><table><thead><tr><th>Numero</th><th>Data</th>${showPt?'<th>Paziente</th>':''}<th>Studio</th><th class="r">Totale</th><th>Sistema TS</th><th>Stato</th></tr></thead><tbody>
+  ${is.map(i=>`<tr class="click" data-act="inv" data-id="${i.id}"><td class="mono">${i.num}</td><td class="num">${fmtD(i.date)}</td>${showPt?`<td>${esc(full(pat(i.patientId)))}</td>`:''}<td>${esc(studio(i.studioId).nome)}</td><td class="r num">${euro(i.tot)}</td><td>${i.ts?'<span class="chip">Da inviare</span>':'<span class="chip">Opposto</span>'}</td><td>${i.paid?'<span class="chip good">Pagata</span>':'<span class="chip bad">Da incassare</span>'}</td></tr>`).join('')||`<tr><td colspan="7" class="empty">Nessuna fattura.</td></tr>`}</tbody></table></div>`;
+}
+
+/* ---------- Fatturazione ---------- */
+function vBilling(){
+  const ym=T.slice(0,7);
+  const all=DB.invoices.filter(inStudio);
+  const month=all.filter(i=>i.date.slice(0,7)===ym);
+  const unpaid=all.filter(i=>!i.paid);
+  const ub=unbilled();const byP={};ub.forEach(a=>(byP[a.patientId]=byP[a.patientId]||[]).push(a));
+  const shown=all.filter(i=>S.invFilter==='tutte'||(S.invFilter==='aperte'?!i.paid:i.paid)).sort((a,b)=>b.date.localeCompare(a.date));
+  return `<div class="head"><div><div class="eyebrow">Regime ${DB.me.regime} · P. IVA <span class="mono">${esc(DB.me.piva)||'—'}</span></div><h1>Fatturazione</h1></div></div>
+  <div class="stats">
+    <div class="stat"><span>Fatturato ${MESI[TODAY.getMonth()]}</span><b>${euro(month.reduce((s,i)=>s+i.tot,0))}</b></div>
+    <div class="stat"><span>Da incassare (${unpaid.length})</span><b>${euro(unpaid.reduce((s,i)=>s+i.tot,0))}</b></div>
+    <div class="stat"><span>Prestazioni da fatturare</span><b>${ub.length}</b></div>
+    <div class="stat"><span>Fatturato ${TODAY.getFullYear()}</span><b>${euro(all.filter(i=>i.date.slice(0,4)===T.slice(0,4)).reduce((s,i)=>s+i.tot,0))}</b></div>
+  </div>
+  <section class="panel"><header><h2>Prestazioni da fatturare</h2><span class="muted" style="font-size:.85rem">Le assenze non disdettate sono fatturabili</span></header>
+    ${Object.keys(byP).length?`<ul class="list">${Object.entries(byP).map(([pid,as])=>{const p=pat(pid);const c=calcInv(as.map(a=>lineOf(a,DB.me)),DB.me.cassa);return `<li style="${sCol(as[0].studioId)}"><span class="dot"></span><div class="grow"><b>${esc(full(p))}</b><div class="muted" style="font-size:.85rem">${as.length} ${as.length>1?'prestazioni':'prestazione'} · ${esc(studio(as[0].studioId).nome)} · dal ${fmtD(as[0].date)}</div></div><span class="num">${euro(c.tot)}</span><button class="btn small primary" data-act="newInv" data-p="${pid}">Emetti</button></li>`}).join('')}</ul>`:'<p class="empty">Tutte le prestazioni svolte sono fatturate.</p>'}
+  </section>
+  <section class="panel"><header><h2>Fatture emesse</h2><div class="pills">${[['tutte','Tutte'],['aperte','Da incassare'],['pagate','Pagate']].map(([k,l])=>`<button class="pill" data-act="invF" data-v="${k}" aria-pressed="${S.invFilter===k}">${l}</button>`).join('')}</div></header>${invTable(shown)}</section>
+  <p class="muted small" style="margin:0;max-width:75ch">Le fatture per prestazioni sanitarie ai pazienti privati si emettono in formato cartaceo o PDF, non come fattura elettronica. I dati di spesa vanno trasmessi al Sistema Tessera Sanitaria, salvo opposizione del paziente.</p>`;
+}
+
+/* ---------- Studi ---------- */
+function costoStudio(s,ym){
+  const as=DB.appts.filter(a=>a.studioId===s.id&&a.date.slice(0,7)===ym&&a.status!=='disdetto');
+  const done=as.filter(a=>billable(a)&&a.date<=T);
+  const compensi=done.reduce((x,a)=>x+priceOf(a,DB.me),0);
+  const ore=as.reduce((x,a)=>x+a.dur,0)/60;
+  const v=+s.costo.valore||0;
+  const costo=s.costo.tipo==='mese'?v:s.costo.tipo==='ora'?r2(ore*v):s.costo.tipo==='percentuale'?r2(compensi*v/100):0;
+  return {sedute:done.length,compensi,ore,costo,netto:r2(compensi-costo)};
+}
+const costoLabel=c=>c.tipo==='mese'?`${euro(+c.valore)} al mese`:c.tipo==='ora'?`${euro(+c.valore)} l’ora`:c.tipo==='percentuale'?`${c.valore}% sul compenso`:'Nessun costo';
+function vStudi(){
+  const ym=T.slice(0,7);
+  const W0=monday(TODAY),days=[...Array(6)].map((_,i)=>iso(addDays(W0,i)));
+  const st=activeStudi();const arch=DB.studi.filter(s=>s.attivo===false);
+  const rows=st.map(s=>({s,...costoStudio(s,ym)}));
+  const tot=rows.reduce((a,r)=>({sedute:a.sedute+r.sedute,compensi:a.compensi+r.compensi,costo:a.costo+r.costo,netto:a.netto+r.netto}),{sedute:0,compensi:0,costo:0,netto:0});
+  return `<div class="head"><div><div class="eyebrow">${st.length} ${st.length===1?'studio attivo':'studi attivi'}</div><h1>I miei studi</h1></div><button class="btn primary" data-act="newStudio">Aggiungi studio</button></div>
+  <div class="team">${st.map(s=>{const n=DB.appts.filter(a=>a.studioId===s.id&&days.includes(a.date)&&a.status!=='disdetto').length;const pz=DB.patients.filter(p=>p.studioId===s.id).length;
+    return `<article class="panel" style="${sCol(s.id)}"><div class="row"><span class="dot" style="width:14px;height:14px"></span><div class="grow"><h2>${esc(s.nome)}</h2><div class="muted" style="font-size:.85rem">${esc(s.indirizzo)||'Indirizzo non indicato'}</div></div></div>
+    ${s.nota?`<p class="muted small" style="margin:0">${esc(s.nota)}</p>`:''}
+    <dl class="kv" style="font-size:.88rem"><dt>Orari</dt><dd>${[0,1,2,3,4,5].filter(i=>s.orari[i]).map(i=>`${cap(GIORNI[i].slice(0,3))} ${s.orari[i].join('–')}`).join('<br>')||'—'}</dd><dt>Costo</dt><dd>${costoLabel(s.costo)}</dd><dt>Pazienti</dt><dd>${pz}</dd><dt>Questa settimana</dt><dd>${n} appuntamenti</dd></dl>
+    <div class="acts"><button class="btn small" data-act="editStudio" data-id="${s.id}">Modifica</button>${st.length>1?`<button class="btn small danger" data-act="archStudio" data-id="${s.id}">Archivia</button>`:''}</div></article>`}).join('')}</div>
+  <section class="panel"><header><h2>Resoconto di ${MESI[TODAY.getMonth()]}</h2><span class="muted" style="font-size:.85rem">Compensi delle prestazioni svolte meno il costo dello studio</span></header><div class="tbl-wrap"><table><thead><tr><th>Studio</th><th>Costo</th><th class="r">Prestazioni</th><th class="r">Compensi</th><th class="r">Costo studio</th><th class="r">Netto</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><span class="row" style="gap:6px;flex-wrap:nowrap;${sCol(r.s.id)}"><span class="dot"></span>${esc(r.s.nome)}</span></td><td class="muted">${costoLabel(r.s.costo)}</td><td class="r num">${r.sedute}</td><td class="r num">${euro(r.compensi)}</td><td class="r num">${euro(r.costo)}</td><td class="r num ${r.netto<0?'neg':''}"><b>${euro(r.netto)}</b></td></tr>`).join('')}
+    <tr><td><b>Totale</b></td><td></td><td class="r num"><b>${tot.sedute}</b></td><td class="r num"><b>${euro(tot.compensi)}</b></td><td class="r num"><b>${euro(tot.costo)}</b></td><td class="r num"><b>${euro(tot.netto)}</b></td></tr>
+  </tbody></table></div><p class="muted small" style="margin:0;padding:0 16px 14px">Per le stanze a ore conta le ore prenotate nel mese; i compensi sono al netto del contributo integrativo e del bollo.</p></section>
+  ${arch.length?`<section class="panel"><header><h2>Studi archiviati</h2></header><ul class="list">${arch.map(s=>`<li style="${sCol(s.id)}"><span class="dot"></span><div class="grow"><b>${esc(s.nome)}</b><div class="muted" style="font-size:.85rem">${DB.appts.filter(a=>a.studioId===s.id).length} appuntamenti nello storico</div></div><button class="btn small" data-act="reactStudio" data-id="${s.id}">Riattiva</button></li>`).join('')}</ul></section>`:''}`;
+}
+
+/* ---------- Profilo ---------- */
+function vProfile(){
+  const m=DB.me;
+  return `<div class="head"><div><div class="eyebrow">Il tuo account</div><h1>${esc(meName())}</h1></div><button class="btn" data-act="logout">Esci</button></div>
+  <div class="two"><section class="panel"><header><h2>Dati professionali e fatturazione</h2><button class="btn small" data-act="editMe">Modifica</button></header><div class="body"><dl class="kv">
+    <dt>Professione</dt><dd>${P_().label}</dd><dt>Qualifica</dt><dd>${esc(m.qualifica)||'—'}</dd><dt>Iscrizione</dt><dd>${esc(m.albo)||'—'}</dd>
+    <dt>P. IVA</dt><dd class="mono">${esc(m.piva)||'—'}</dd><dt>Regime</dt><dd>${cap(m.regime)}</dd>
+    <dt>Tariffa seduta</dt><dd>${euro(m.tariffa)}</dd><dt>Tariffa valutazione</dt><dd>${euro(m.tariffaVal)}</dd>
+    <dt>Rivalsa</dt><dd>${esc(m.cassaNome)} (${m.cassa}%)</dd><dt>Prestazione in fattura</dt><dd>${esc(m.prest)}</dd><dt>Nome utente</dt><dd class="mono">${esc(USERNAME)}</dd></dl></div></section>
+  <section class="panel"><header><h2>Cambia password</h2></header><form class="body" data-form="pw" style="display:flex;flex-direction:column;gap:12px">
+    <label class="fl" for="pwCur">Password attuale<input type="password" id="pwCur" name="cur" autocomplete="current-password" required></label>
+    <label class="fl" for="pwN1">Nuova password<input type="password" id="pwN1" name="n1" autocomplete="new-password" required></label>
+    <label class="fl" for="pwN2">Ripeti la nuova password<input type="password" id="pwN2" name="n2" autocomplete="new-password" required></label>
+    <p class="muted small" style="margin:0">Almeno 10 caratteri. Cambiandola, gli altri dispositivi collegati vengono disconnessi.</p>
+    <div><button class="btn primary">Aggiorna password</button></div></form></section></div>
+  <div class="two"><section class="panel"><header><h2>Ultimi accessi e operazioni</h2></header><div class="tbl-wrap" id="auditBox"><p class="empty">Caricamento…</p></div></section>
+  <section class="panel"><header><h2>Copia dei tuoi dati</h2></header><div class="body"><p class="muted" style="margin:0 0 12px;max-width:60ch">Il server fa un backup automatico ogni giorno e conserva gli ultimi 14. Puoi anche scaricare una copia completa dei dati in formato JSON da tenere al sicuro. Il file non è cifrato: conservalo con cura.</p><a class="btn" href="/api/export" download>Scarica una copia dei dati</a></div></section></div>`;
+}
+
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',setup_codice_errato:'Codice di installazione errato'};
+async function loadAudit(){const box=$('#auditBox');if(!box)return;
+  try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
+  catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
+
+/* ---------- modali ---------- */
+let onSubmit=null;
+function modal(title,body,foot='',handler=null){
+  $('#sheet').innerHTML=`<header><h2>${title}</h2><button class="x" data-act="close" aria-label="Chiudi">×</button></header><form id="mform" novalidate><div class="body">${body}</div>${foot?`<footer>${foot}</footer>`:''}</form>`;
+  onSubmit=handler;$('#modal').hidden=false;
+  const f=$('#sheet').querySelector('input,select,textarea');if(f)f.focus();
+}
+function close(){$('#modal').hidden=true;onSubmit=null}
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2600)}
+const opt=(v,l,sel)=>`<option value="${esc(v)}" ${String(v)===String(sel)?'selected':''}>${esc(l)}</option>`;
+
+function apptForm(pre={}){
+  if(!DB.patients.length){toast('Aggiungi prima un paziente');patientForm(null);return}
+  const pid=pre.patientId||'';const p=pid?pat(pid):null;
+  const date0=pre.date||T,start0=pre.start||'15:00';
+  const st0=pre.studioId||(S.studio!=='tutti'?S.studio:(studioAt(date0,start0)||{}).id||(p&&p.studioId)||activeStudi()[0].id);
+  const pts=DB.patients.slice().sort((a,b)=>a.cognome.localeCompare(b.cognome));
+  modal('Nuovo appuntamento',`<div class="fgrid">
+    <label class="span2">Paziente<select name="patientId" id="aPt" required><option value="">Scegli…</option>${pts.map(x=>opt(x.id,`${x.cognome} ${x.nome}`,pid)).join('')}</select></label>
+    <label>Data<input type="date" name="date" id="aDate" value="${date0}" required></label>
+    <label>Ora<input type="time" name="start" id="aStart" value="${start0}" step="900" required></label>
+    <label>Studio<select name="studioId" id="aStudio">${activeStudi().map(x=>opt(x.id,x.nome,st0)).join('')}</select></label>
+    <label>Tipo<select name="type" id="aType">${P_().tipi.map(t=>opt(t,t,'Seduta')).join('')}</select></label>
+    <label>Durata<select name="dur" id="aDur">${[30,45,50,60,90].map(d=>opt(String(d),d+' minuti',DB.me.professione==='logopedia'?'45':'50')).join('')}</select></label>
+    <label>Ripeti ogni settimana per<select name="rep" id="aRep">${[1,4,8,12].map(n=>opt(String(n),n===1?'Solo questa volta':`${n} settimane`,'1')).join('')}</select></label>
+    <p class="span2 muted" id="aWarn" style="margin:0;font-size:.85rem"></p></div>`,
+    `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Prenota</button>`,
+    f=>{
+      if(!f.patientId){toast('Scegli un paziente');return false}
+      const n=+f.rep;let clash=0,viaggio=0;const s=toMin(f.start),e=s+ +f.dur;
+      for(let i=0;i<n;i++){const date=iso(addDays(parse(f.date),i*7));
+        const same=DB.appts.filter(a=>a.date===date&&a.status!=='disdetto');
+        if(same.some(a=>toMin(a.start)<e&&toMin(a.start)+a.dur>s))clash++;
+        if(same.some(a=>a.studioId!==f.studioId&&Math.min(Math.abs(toMin(a.start)-e),Math.abs(s-(toMin(a.start)+a.dur)))<60))viaggio++;
+        DB.appts.push({id:uid(),patientId:f.patientId,studioId:f.studioId,date,start:f.start,dur:+f.dur,type:f.type,status:'prenotato',invoiceId:null})}
+      const w=[clash?`${clash} sovrapposizioni`:'',viaggio?`meno di un’ora per spostarti da un altro studio`:''].filter(Boolean).join(' · ');
+      toast((n>1?`${n} appuntamenti prenotati`:'Appuntamento prenotato')+(w?` · attenzione: ${w}`:''));
+    });
+  const hint=()=>{const d=$('#aDate').value,t=$('#aStart').value;if(!d||!t)return;const at=studioAt(d,t),sel=$('#aStudio').value,g=GIORNI[wd(d)];
+    const ws=studiDelGiorno(d);
+    $('#aWarn').textContent=!ws.length?`Di ${g} non hai orari di studio.`:at&&at.id===sel?`Di ${g} alle ${t} sei a ${at.nome}.`:at?`A quell’ora di solito sei a ${at.nome}.`:`Fuori dai tuoi orari: di ${g} sei a ${ws.map(s=>`${s.nome} ${s.orari[wd(d)].join('–')}`).join(', ')}.`};
+  const suggest=()=>{const d=$('#aDate').value,t=$('#aStart').value;if(!d||!t)return;const at=studioAt(d,t);if(at&&S.studio==='tutti')$('#aStudio').value=at.id;hint()};
+  $('#aPt').addEventListener('change',e=>{const x=pat(e.target.value);if(x&&!studioAt($('#aDate').value,$('#aStart').value)&&activeStudi().some(s=>s.id===x.studioId))$('#aStudio').value=x.studioId;hint()});
+  $('#aDate').addEventListener('change',suggest);$('#aStart').addEventListener('change',suggest);$('#aStudio').addEventListener('change',hint);
+  hint();
+}
+function apptDetail(id){
+  const a=DB.appts.find(x=>x.id===id),p=pat(a.patientId);
+  const note=DB.notes.find(n=>n.apptId===a.id);
+  modal(esc(full(p)),`<dl class="kv"><dt>Quando</dt><dd>${fmtLong(a.date)}, ${a.start}–${hhmm(toMin(a.start)+a.dur)}</dd><dt>Tipo</dt><dd>${a.type}</dd><dt>Studio</dt><dd>${esc(studio(a.studioId).nome)}</dd><dt>Tariffa</dt><dd>${euro(priceOf(a,DB.me))}</dd>${a.invoiceId?`<dt>Fattura</dt><dd class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</dd>`:''}</dl>
+    <label class="fl">Stato<select name="status" id="dStatus" ${a.invoiceId?'disabled':''}>${Object.entries(STATI).map(([k,[l]])=>opt(k,l,a.status)).join('')}</select></label>
+    ${note?`<div><div class="eyebrow">Nota di seduta</div><p style="margin:4px 0 0">${esc(note.text)}</p></div>`:''}`,
+    `${!a.invoiceId?`<button type="button" class="btn danger" data-act="delAppt" data-id="${a.id}">Elimina</button>`:''}<button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button>${a.status==='svolto'&&!note?`<button type="button" class="btn" data-act="note" data-id="${a.id}">Scrivi nota</button>`:''}<button class="btn primary">Salva</button>`,
+    f=>{if(f.status)a.status=f.status;toast('Appuntamento aggiornato')});
+}
+function noteForm({apptId,patientId}){
+  const a=apptId&&DB.appts.find(x=>x.id===apptId);const p=pat(a?a.patientId:patientId);
+  const opts=DB.appts.filter(x=>x.patientId===p.id&&x.status==='svolto').sort((x,y)=>y.date.localeCompare(x.date)).slice(0,8);
+  modal(`Nota di seduta · ${esc(full(p))}`,`<label class="fl">Seduta<select name="apptId" id="nAppt"><option value="">Nessuna (nota libera)</option>${opts.map(x=>opt(x.id,`${fmtLong(x.date)} · ${x.start} · ${studio(x.studioId).nome}`,apptId||opts[0]?.id)).join('')}</select></label>
+    <label class="fl">Contenuto<textarea name="text" id="nText" required style="min-height:160px" placeholder="Temi emersi, attività svolte, risposta del paziente, indicazioni per la prossima seduta"></textarea></label>`,
+    `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Salva nota</button>`,
+    f=>{if(!f.text.trim()){toast('Scrivi il contenuto della nota');return false}const ap=DB.appts.find(x=>x.id===f.apptId);DB.notes.push({id:uid(),patientId:p.id,apptId:f.apptId||null,date:ap?ap.date:T,text:f.text.trim()});toast('Nota salvata')});
+}
+function patientForm(p){
+  const x=p||{nome:'',cognome:'',nascita:'',cf:'',studioId:S.studio!=='tutti'?S.studio:activeStudi()[0].id,tel:'',email:'',invio:'',motivo:'',tutori:[]};
+  const t=i=>x.tutori[i]||{nome:'',rel:i?'Padre':'Madre',tel:''};
+  const fld=(n,l,v,type='text',req='')=>`<label>${l}<input name="${n}" id="pf-${n}" type="${type}" value="${esc(v)}" ${req}></label>`;
+  modal(p?'Modifica paziente':'Nuovo paziente',`<div class="fgrid">
+    ${fld('nome','Nome',x.nome,'text','required')}${fld('cognome','Cognome',x.cognome,'text','required')}
+    ${fld('nascita','Data di nascita',x.nascita,'date','required')}${fld('cf','Codice fiscale',x.cf)}
+    <label class="span2">Studio abituale<select name="studioId" id="pf-studio">${activeStudi().map(r=>opt(r.id,r.nome,x.studioId)).join('')}</select></label>
+    ${fld('tel','Telefono',x.tel,'tel')}${fld('email','Email',x.email,'email')}
+    <label class="span2">Inviato da<input name="invio" id="pf-invio" value="${esc(x.invio)}" placeholder="Medico, scuola, accesso diretto…"></label>
+    ${p?'':`<label class="span2">Motivo della richiesta<textarea name="motivo" id="pf-motivo"></textarea></label>`}
+    <p class="span2 eyebrow" style="margin:6px 0 0">Genitori o tutori (per i minori)</p>
+    ${[0,1].map(i=>`${fld('t'+i+'nome',i?'Secondo genitore':'Primo genitore',t(i).nome)}${fld('t'+i+'tel','Telefono',t(i).tel,'tel')}`).join('')}
+  </div>`,`<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">${p?'Salva':'Crea paziente'}</button>`,
+  f=>{
+    if(!f.nome.trim()||!f.cognome.trim()||!f.nascita){toast('Nome, cognome e data di nascita sono obbligatori');return false}
+    const tutori=[0,1].filter(i=>f['t'+i+'nome'].trim()).map(i=>({nome:f['t'+i+'nome'].trim(),rel:t(i).rel,tel:f['t'+i+'tel']}));
+    const data={nome:f.nome.trim(),cognome:f.cognome.trim(),nascita:f.nascita,cf:f.cf.toUpperCase(),studioId:f.studioId,tel:f.tel,email:f.email,invio:f.invio,tutori};
+    if(p){Object.assign(p,data);toast('Dati aggiornati')}
+    else{const np={id:uid(),...data,motivo:f.motivo,anamnesi:'',obiettivi:[],consensi:{informato:false,privacy:false,entrambi:false,ts:'ok'}};DB.patients.push(np);S.view='paziente';S.pid=np.id;S.ptab='consensi';toast('Paziente creato · raccogli i consensi')}
+  });
+}
+function invForm(pid){
+  const p=pat(pid);const as=DB.appts.filter(a=>a.patientId===pid&&billable(a)&&!a.invoiceId&&a.date<=T).sort((a,b)=>a.date.localeCompare(b.date));
+  const recalc=()=>{const ids=[...document.querySelectorAll('[name=sel]:checked')].map(i=>i.value);const c=calcInv(as.filter(a=>ids.includes(a.id)).map(a=>lineOf(a,DB.me)),DB.me.cassa);
+    $('#iCalc').innerHTML=`<tr><td>Compenso</td><td class="r num">${euro(c.imp)}</td></tr><tr><td>${esc(DB.me.cassaNome)}</td><td class="r num">${euro(c.contr)}</td></tr><tr><td>Marca da bollo${c.bollo?'':' (non dovuta fino a € 77,47)'}</td><td class="r num">${euro(c.bollo)}</td></tr><tr class="tot"><td>Totale</td><td class="r num">${euro(c.tot)}</td></tr>`};
+  modal(`Nuova fattura · ${esc(full(p))}`,`<div>${as.map(a=>`<label class="check"><input type="checkbox" name="sel" value="${a.id}" checked><span class="grow">${esc(lineOf(a,DB.me).desc)}<br><span class="muted small">${esc(studio(a.studioId).nome)}</span></span><span class="num">${euro(priceOf(a,DB.me))}</span></label>`).join('')}</div>
+    <div class="inv" style="padding:12px 16px"><table><tbody id="iCalc"></tbody></table></div>
+    <label class="fl">Data fattura<input type="date" name="date" id="iDate" value="${T}"></label>
+    <p class="muted" style="margin:0;font-size:.85rem">${p.consensi.ts==='opposizione'?'Il paziente si è opposto: la spesa non sarà inviata al Sistema TS.':'La spesa verrà inclusa nel prossimo invio al Sistema Tessera Sanitaria.'}</p>`,
+    `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Emetti fattura</button>`,
+    f=>{const ids=[...document.querySelectorAll('[name=sel]:checked')].map(i=>i.value);if(!ids.length){toast('Seleziona almeno una prestazione');return false}
+      const inv=makeInvoice(DB,p,as.filter(a=>ids.includes(a.id)),f.date||T);DB.invoices.push(inv);setTimeout(()=>invDetail(inv.id),0);toast(`Fattura ${inv.num} emessa`)});
+  $('#sheet').addEventListener('change',e=>{if(e.target.name==='sel')recalc()});recalc();
+}
+function invDetail(id){
+  const i=DB.invoices.find(x=>x.id===id),p=pat(i.patientId),m=DB.me,st=studio(i.studioId);
+  const legal=(i.regime==='forfettario'
+    ?'Operazione effettuata ai sensi dell’art. 1, commi da 54 a 89, della Legge n. 190/2014 – Regime forfettario. Operazione non soggetta a ritenuta alla fonte a titolo di acconto ai sensi dell’art. 1, comma 67, L. n. 190/2014. '
+    :'Operazione esente IVA ai sensi dell’art. 10, c. 1, n. 18, DPR 633/1972. ')
+    +(i.bollo?'Imposta di bollo da € 2,00 assolta sull’originale per importi superiori a € 77,47. ':'')
+    +(i.ts?'Spesa sanitaria da trasmettere al Sistema Tessera Sanitaria.':'Il paziente si è opposto alla trasmissione dei dati al Sistema Tessera Sanitaria.');
+  modal(`Fattura ${i.num}`,`<div class="inv">
+    <div class="top"><div><b>${esc(meName())}</b><br><span class="muted">${esc(m.qualifica)}<br>${esc(m.albo)}<br>P. IVA <span class="mono">${esc(m.piva)}</span><br>Prestazione resa presso: ${esc(st.nome)}${st.indirizzo?`, ${esc(st.indirizzo)}`:''}</span></div>
+    <div style="text-align:right"><div class="eyebrow">Fattura n.</div><b class="mono" style="font-size:1.1rem">${i.num}</b><br><span class="muted">del ${fmtD(i.date)}</span></div></div>
+    <div><div class="eyebrow">Intestata a</div>${esc(full(p))}${p.cf?` · C.F. <span class="mono">${esc(p.cf)}</span>`:''}${ageOf(p.nascita)<18&&p.tutori[0]?`<br><span class="muted">Pagamento a cura di ${esc(p.tutori[0].nome)}</span>`:''}</div>
+    <table><thead><tr><th>Descrizione</th><th class="r">Importo</th></tr></thead><tbody>
+      ${i.lines.map(l=>`<tr><td>${esc(l.desc)}</td><td class="r num">${euro(l.amount)}</td></tr>`).join('')}
+      <tr><td>${esc(i.cassaNome)}</td><td class="r num">${euro(i.contr)}</td></tr>
+      ${i.bollo?`<tr><td>Rimborso marca da bollo</td><td class="r num">${euro(i.bollo)}</td></tr>`:''}
+      <tr class="tot"><td>Totale</td><td class="r num">${euro(i.tot)}</td></tr></tbody></table>
+    <p class="legal">${legal}</p></div>
+    <label class="check" style="border:0"><input type="checkbox" name="paid" id="iPaid" ${i.paid?'checked':''}><span>Pagamento ricevuto</span></label>`,
+    `<button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button><button class="btn primary">Salva</button>`,
+    f=>{i.paid=!!f.paid;toast(i.paid?'Fattura segnata come pagata':'Fattura aggiornata')});
+}
+function studioForm(s){
+  const x=s||{nome:'',indirizzo:'',nota:'',costo:{tipo:'nessuno',valore:0},col:COLORI.find(c=>!activeStudi().some(q=>q.col===c))||'--c5',orari:{}};
+  modal(s?`Modifica · ${esc(s.nome)}`:'Nuovo studio',`<div class="fgrid">
+    <label>Nome<input name="nome" id="st-nome" value="${esc(x.nome)}" required placeholder="Es. Studio Prati"></label>
+    <label>Indirizzo<input name="indirizzo" id="st-ind" value="${esc(x.indirizzo)}" placeholder="Via, città"></label>
+    <label class="span2">Nota<input name="nota" id="st-nota" value="${esc(x.nota)}" placeholder="Es. stanza condivisa, citofono, accordi"></label>
+    <label>Costo dello studio<select name="ctipo" id="st-ctipo">${Object.entries(COSTI).map(([k,l])=>opt(k,l,x.costo.tipo)).join('')}</select></label>
+    <label>Importo<input type="number" name="cval" id="st-cval" min="0" step="0.5" value="${x.costo.valore}" placeholder="€ o %"></label>
+    <div class="span2 fl">Colore<div class="swatches">${COLORI.map(c=>`<label style="--pc:var(${c})"><input type="radio" name="col" value="${c}" ${x.col===c?'checked':''} aria-label="Colore ${c.slice(3)}"><span></span></label>`).join('')}</div></div>
+    <div class="span2 fl">Orari settimanali in questo studio<div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">${[0,1,2,3,4,5].map(i=>`<label>${cap(GIORNI[i])}<span class="row" style="gap:4px;flex-wrap:nowrap"><input type="time" name="o${i}" id="st-o${i}" value="${x.orari[i]?x.orari[i][0]:''}" step="900" style="flex:1;min-width:0"><input type="time" name="c${i}" id="st-c${i}" value="${x.orari[i]?x.orari[i][1]:''}" step="900" style="flex:1;min-width:0"></span></label>`).join('')}</div><span class="muted small" style="font-weight:400">Lascia vuoto nei giorni in cui non ci sei.</span></div>
+  </div>`,`<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">${s?'Salva':'Aggiungi studio'}</button>`,
+  f=>{
+    if(!f.nome.trim()){toast('Dai un nome allo studio');return false}
+    const orari={};for(const i of [0,1,2,3,4,5]){const o=f['o'+i],c=f['c'+i];if(o||c){if(!o||!c||toMin(o)>=toMin(c)){toast(`Controlla l’orario di ${GIORNI[i]}`);return false}orari[i]=[o,c]}}
+    const data={nome:f.nome.trim(),indirizzo:f.indirizzo.trim(),nota:f.nota.trim(),costo:{tipo:f.ctipo,valore:+f.cval||0},col:f.col||x.col,orari};
+    if(s){Object.assign(s,data);toast('Studio aggiornato')}else{DB.studi.push({id:'s'+uid(),attivo:true,...data});S.filter=null;toast(`${data.nome} aggiunto`)}
+  });
+}
+function archiveStudio(id){
+  const s=studio(id);const fut=DB.appts.filter(a=>a.studioId===id&&a.status==='prenotato'&&a.date>=T);
+  const others=activeStudi().filter(x=>x.id!==id);
+  modal(`Archivia ${esc(s.nome)}`,`<p class="callout">Lo studio sparisce da agenda e prenotazioni. Storico, fatture e resoconti restano consultabili, e puoi riattivarlo quando vuoi.</p>
+    ${fut.length?`<p style="margin:0">Ci sono ${fut.length} appuntamenti futuri in questo studio.</p>
+    <label class="fl">Cosa farne<select name="fate" id="arFate">${others.map(o=>opt(o.id,`Spostali a ${o.nome}`,others[0].id)).join('')}<option value="disdici">Segnali come disdetti</option></select></label>`:''}`,
+    `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary" style="background:var(--bad);border-color:var(--bad)">Archivia</button>`,
+    f=>{fut.forEach(a=>{if(f.fate==='disdici')a.status='disdetto';else a.studioId=f.fate});
+      const dest=others[0].id;DB.patients.filter(p=>p.studioId===id).forEach(p=>p.studioId=f.fate&&f.fate!=='disdici'?f.fate:dest);
+      s.attivo=false;S.filter=null;if(S.studio===id)S.studio='tutti';toast(`${s.nome} archiviato`)});
+}
+function meForm(){
+  const m=DB.me;
+  const fld=(n,l,v,type='text',extra='')=>`<label>${l}<input name="${n}" id="me-${n}" type="${type}" value="${esc(v)}" ${extra}></label>`;
+  modal('Dati professionali',`<div class="fgrid">
+    <label>Titolo<select name="titolo" id="me-titolo">${['Dott.ssa','Dott.','Prof.ssa','Prof.',''].map(t=>opt(t,t||'Nessuno',m.titolo)).join('')}</select></label>
+    <label>Professione<select name="professione" id="me-prof">${opt('psicologia','Psicologo/a',m.professione)}${opt('logopedia','Logopedista',m.professione)}</select></label>
+    ${fld('nome','Nome',m.nome,'text','required')}${fld('cognome','Cognome',m.cognome,'text','required')}
+    <label class="span2">Qualifica<input name="qualifica" id="me-qualifica" value="${esc(m.qualifica)}"></label>
+    <label class="span2">Iscrizione all’albo<input name="albo" id="me-albo" value="${esc(m.albo)}"></label>
+    ${fld('piva','Partita IVA',m.piva,'text','inputmode="numeric" maxlength="11"')}
+    <label>Regime fiscale<select name="regime" id="me-regime">${opt('forfettario','Forfettario',m.regime)}${opt('ordinario','Ordinario',m.regime)}</select></label>
+    ${fld('tariffa','Tariffa seduta (€)',m.tariffa,'number','min="0"')}${fld('tariffaVal','Tariffa valutazione (€)',m.tariffaVal,'number','min="0"')}
+    ${fld('cassa','Contributo integrativo (%)',m.cassa,'number','min="0" max="10" step="0.5"')}${fld('cassaNome','Dicitura in fattura',m.cassaNome)}
+    <label class="span2">Descrizione della prestazione in fattura<input name="prest" id="me-prest" value="${esc(m.prest)}"></label>
+  </div>`,`<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Salva</button>`,
+  f=>{
+    if(!f.nome.trim()||!f.cognome.trim()){toast('Nome e cognome sono obbligatori');return false}
+    if(f.piva&&!/^\d{11}$/.test(f.piva)){toast('La partita IVA deve avere 11 cifre');return false}
+    Object.assign(m,{titolo:f.titolo,professione:f.professione,nome:f.nome.trim(),cognome:f.cognome.trim(),qualifica:f.qualifica.trim(),albo:f.albo.trim(),piva:f.piva,regime:f.regime,tariffa:+f.tariffa||0,tariffaVal:+f.tariffaVal||0,cassa:+f.cassa||0,cassaNome:f.cassaNome.trim(),prest:f.prest.trim()||P_().prest});
+    toast('Dati aggiornati · valgono per le prossime fatture');
+  });
+  $('#me-prof').addEventListener('change',e=>{const d=PROF[e.target.value];$('#me-cassa').value=d.cassa;$('#me-cassaNome').value=d.cassaNome;$('#me-prest').value=d.prest});
+}
+
+/* ---------- eventi ---------- */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const act=el.dataset.act,id=el.dataset.id;
+  if(el.tagName==='A')e.preventDefault();
+  if(act==='slot'&&e.target!==el&&!e.target.classList.contains('avail'))return;
+  switch(act){
+    case 'go':S.view=el.dataset.v;close();render();window.scrollTo(0,0);break;
+    case 'close':close();break;
+    case 'logout':(async()=>{if(dirty){clearTimeout(saveTimer);await flush()}try{await api('/api/logout',{method:'POST'})}catch(_){ }showLogin();toast('Sei uscito')})();break;
+    case 'showPw':{const i=$('#lgPw');i.type=i.type==='password'?'text':'password';el.textContent=i.type==='password'?'Mostra':'Nascondi';break}
+    case 'newAppt':apptForm({patientId:el.dataset.p});break;
+    case 'slot':{const r=el.getBoundingClientRect();const m=H0*60+Math.floor((e.clientY-r.top)/PX*4)*15;const t=hhmm(Math.min(m,H1*60-30));const at=studioAt(el.dataset.d,t);apptForm({date:el.dataset.d,start:t,studioId:at&&S.filter.includes(at.id)?at.id:undefined});break}
+    case 'appt':apptDetail(id);break;
+    case 'delAppt':DB.appts=DB.appts.filter(a=>a.id!==id);save();close();render();toast('Appuntamento eliminato');break;
+    case 'status':{const a=DB.appts.find(x=>x.id===id);a.status=el.dataset.v;save();render();toast(`Segnato come ${STATI[a.status][0].toLowerCase()}`);break}
+    case 'wk':S.week=el.dataset.v==='0'?0:S.week+ +el.dataset.v;S.day=null;render();break;
+    case 'day':S.day=el.dataset.v;render();break;
+    case 'flt':{const s=new Set(S.filter);s.has(id)?s.delete(id):s.add(id);S.filter=[...s];render();break}
+    case 'openPt':S.pid=id;S.view='paziente';S.ptab=el.dataset.tab||'anagrafica';close();render();window.scrollTo(0,0);break;
+    case 'ptab':S.ptab=el.dataset.v;render();break;
+    case 'newPt':patientForm(null);break;
+    case 'editPt':patientForm(pat(S.pid));break;
+    case 'note':noteForm({apptId:id,patientId:el.dataset.p});break;
+    case 'saveAnam':pat(S.pid).anamnesi=$('#anam').value;save();toast('Anamnesi salvata');break;
+    case 'newInv':invForm(el.dataset.p);break;
+    case 'inv':invDetail(id);break;
+    case 'invF':S.invFilter=el.dataset.v;render();break;
+    case 'newStudio':studioForm(null);break;
+    case 'editStudio':studioForm(studio(id));break;
+    case 'archStudio':archiveStudio(id);break;
+    case 'reactStudio':studio(id).attivo=true;S.filter=null;save();render();toast(`${studio(id).nome} riattivato`);break;
+    case 'editMe':meForm();break;
+  }
+});
+document.addEventListener('change',e=>{
+  const el=e.target;
+  if(el.id==='sedeSel'){S.studio=el.value;S.filter=null;render();return}
+  if(!DB)return;
+  const act=el.dataset.act,p=pat(S.pid);
+  if(act==='goal'){p.obiettivi[+el.dataset.i].d=el.checked;save();render()}
+  if(act==='cons'){p.consensi[el.dataset.k]=el.checked;save();render()}
+  if(act==='ts'){p.consensi.ts=el.checked?'opposizione':'ok';save();render()}
+});
+document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=$('#q');q.focus();q.setSelectionRange(pos,pos)}});
+document.addEventListener('submit',e=>{
+  e.preventDefault();const f=e.target;
+  if(f.id==='loginForm'){const n=$('#lgUser').value.trim().toLowerCase(),pw=$('#lgPw').value,err=$('#lgErr');
+    if(!n||!pw){err.textContent='Inserisci nome utente e password.';err.hidden=false;return}
+    const btn=f.querySelector('.primary');btn.disabled=true;
+    (async()=>{try{await api('/api/login',{method:'POST',body:{username:n,password:pw}});await loadData();enterApp();toast(`Bentornata/o, ${DB.me.nome}`)}
+      catch(e){err.textContent=e.status?e.message:'Server non raggiungibile. Controlla la connessione.';err.hidden=false;$('#lgPw').select()}
+      finally{btn.disabled=false}})();return}
+  if(f.id==='setupForm'){const d=Object.fromEntries(new FormData(f)),err=$('#suErr');
+    const fail=m=>{err.textContent=m;err.hidden=false};
+    if(!d.nome.trim()||!d.cognome.trim())return fail('Inserisci nome e cognome.');
+    if(d.piva&&!/^\d{11}$/.test(d.piva))return fail('La partita IVA deve avere 11 cifre.');
+    if(!d.snome.trim())return fail('Dai un nome al tuo primo studio.');
+    const un=d.username.trim().toLowerCase();if(!/^[a-z0-9._-]{3,}$/.test(un))return fail('Nome utente: almeno 3 caratteri, solo lettere, numeri e . _ -');
+    if(!d.code.trim())return fail('Inserisci il codice di installazione.');
+    if(d.pw1.length<10)return fail('La password deve avere almeno 10 caratteri.');
+    if(d.pw1!==d.pw2)return fail('Le due password non coincidono.');
+    const pr=PROF[d.professione];
+    const me={titolo:d.titolo,nome:d.nome.trim(),cognome:d.cognome.trim(),professione:d.professione,qualifica:d.qualifica.trim()||pr.label,albo:d.albo.trim(),piva:d.piva,regime:d.regime,cassa:pr.cassa,cassaNome:pr.cassaNome,prest:pr.prest,tariffa:pr.tariffa,tariffaVal:pr.tariffaVal};
+    const st={id:'s'+uid(),nome:d.snome.trim(),indirizzo:d.sind.trim(),nota:'',costo:{tipo:'nessuno',valore:0},col:'--c1',orari:{},attivo:true};
+    let data;
+    if(d.sample){data=seed();data.me=Object.assign(data.me,me)}else data=emptyDB(me,st);
+    const btn=$('#suBtn');btn.disabled=true;
+    (async()=>{try{await api('/api/setup',{method:'POST',body:{code:d.code.trim(),username:un,password:d.pw1,data}});await loadData();f.reset();enterApp();toast('Il tuo gestionale è pronto');
+        if(!d.sample)setTimeout(()=>{S.view='studi';render();studioForm(DB.studi[0])},400)}
+      catch(e){fail(e.status?e.message:'Server non raggiungibile.')}finally{btn.disabled=false}})();return}
+  if(f.dataset.form==='pw'){const d=Object.fromEntries(new FormData(f));
+    if(d.n1.length<10){toast('La nuova password deve avere almeno 10 caratteri');return}
+    if(d.n1!==d.n2){toast('Le due password non coincidono');return}
+    (async()=>{try{await api('/api/password',{method:'POST',body:{current:d.cur,next:d.n1}});f.reset();toast('Password aggiornata');loadAudit()}catch(e){toast(e.message)}})();return}
+  if(f.id==='mform'){const data=Object.fromEntries(new FormData(f));if(onSubmit&&onSubmit(data)===false)return;save();close();render();return}
+  const p=pat(S.pid);
+  if(f.dataset.form==='goal'){p.obiettivi.push({t:f.t.value.trim(),d:false});save();render()}
+  if(f.dataset.form==='test'){const d=Object.fromEntries(new FormData(f));if(!d.name||!d.result){toast('Indica strumento ed esito');return}DB.tests.push({id:uid(),patientId:p.id,...d});save();render();toast('Valutazione registrata')}
+});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')close()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)close()});
+MQ.addEventListener('change',()=>{if(S.view==='agenda')render()});
+(async()=>{
+  try{const s=await api('/api/status');
+    if(!s.configured){showSetup();if(!s.setupEnabled){const e=$('#suErr');e.textContent='Sul server manca il codice di installazione: controlla il file di configurazione.';e.hidden=false}return}
+    if(s.logged){await loadData();enterApp()}else showLogin()}
+  catch(e){showLogin('Server non raggiungibile. Riprova tra poco.')}
+})();
+</script>
+</body>
+</html>

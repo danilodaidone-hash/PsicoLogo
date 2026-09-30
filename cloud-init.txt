@@ -1,0 +1,9 @@
+#!/bin/bash
+# ===== PsicoLogo: da incollare in Oracle Cloud alla creazione del server =====
+# Cambia SOLO le due righe qui sotto, lasciando le virgolette.
+SETUP_CODE="scegli-un-codice-lungo-e-segreto"
+REPO_URL="https://github.com/TUO-NOME-UTENTE/psicologo.git"
+# ===== Da qui in giù non serve modificare nulla =====
+apt-get update -y && apt-get install -y git
+git clone "$REPO_URL" /opt/psicologo
+SETUP_CODE="$SETUP_CODE" bash /opt/psicologo/install.sh

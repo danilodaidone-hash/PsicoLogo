@@ -251,6 +251,10 @@ textarea{width:100%;min-height:90px;padding:10px;border:1px solid var(--line);bo
 .linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline;font-size:inherit}
 .sede-where{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 td.neg{color:var(--bad)}
+.doclist .list li{padding:8px 0}
+.conflict{border:1px solid var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--surface));border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:.9rem}
+.conflict b{color:var(--bad)}
+.conflict ul{margin:0;padding-left:18px}
 </style>
 </head>
 <body>
@@ -509,7 +513,7 @@ function renderNav(){
   const n=activeStudi().length;$('#brandSub').textContent=`${n} ${n===1?'studio':'studi'} · ${P_().label.toLowerCase()}`;
   $('#me').innerHTML=`<div class="avatar" style="--pc:var(--accent)">${initials(DB.me)}</div><div class="who"><b>${esc(DB.me.nome+' '+DB.me.cognome)}</b><small>${esc(DB.me.qualifica||P_().label)}</small></div><div class="acts"><button data-act="go" data-v="profilo">Profilo</button><button data-act="logout">Esci</button></div>`;
 }
-function render(){if(!S.logged||!DB)return;renderNav();const m=$('#main');if(S.view==='profilo')setTimeout(loadAudit,0);m.innerHTML=({profilo:vProfile,oggi:vToday,agenda:vAgenda,pazienti:vPatients,paziente:vPatient,fatture:vBilling,studi:vStudi})[S.view]();if(S.view==='agenda')placeNow()}
+function render(){if(!S.logged||!DB)return;renderNav();const m=$('#main');if(S.view==='profilo')setTimeout(loadAudit,0);if(S.view==='paziente'&&S.ptab==='cartella')setTimeout(loadDocs,0);m.innerHTML=({profilo:vProfile,oggi:vToday,agenda:vAgenda,pazienti:vPatients,paziente:vPatient,fatture:vBilling,studi:vStudi})[S.view]();if(S.view==='agenda')placeNow()}
 
 /* ---------- Oggi ---------- */
 function vToday(){
@@ -620,6 +624,10 @@ function tCart(p){
     <div><div class="eyebrow">Motivo della richiesta</div><p style="margin:4px 0 0;max-width:70ch">${esc(p.motivo)||'<span class="muted">Non indicato</span>'}</p></div>
     <label class="fl" for="anam">Anamnesi<textarea id="anam">${esc(p.anamnesi)}</textarea></label>
     <div><button class="btn small" data-act="saveAnam">Salva anamnesi</button></div>
+    <div><div class="eyebrow">Documenti</div>
+      <div id="docBox" class="doclist"><p class="muted small" style="margin:6px 0">Caricamento…</p></div>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn small" data-act="docPick">Carica documento</button><span class="muted small">PDF, immagini, Word, ODT, TXT, Excel · massimo 10 MB · salvati cifrati sul server</span></div>
+      <input type="file" id="docUp" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.odt,.txt,.xlsx"></div>
     <div><div class="eyebrow">Obiettivi del progetto terapeutico</div>
       ${p.obiettivi.map((o,i)=>`<label class="goal ${o.d?'done':''}"><input type="checkbox" data-act="goal" data-i="${i}" ${o.d?'checked':''}><span>${esc(o.t)}</span></label>`).join('')||'<p class="muted small" style="margin:4px 0">Nessun obiettivo ancora.</p>'}
       <form class="row" data-form="goal" style="margin-top:6px"><input class="field" id="goalTxt" name="t" placeholder="Nuovo obiettivo" required style="flex:1 1 220px"><button class="btn small">Aggiungi</button></form></div>
@@ -735,13 +743,36 @@ function vProfile(){
     <p class="muted small" style="margin:0">Almeno 10 caratteri. Cambiandola, gli altri dispositivi collegati vengono disconnessi.</p>
     <div><button class="btn primary">Aggiorna password</button></div></form></section></div>
   <div class="two"><section class="panel"><header><h2>Ultimi accessi e operazioni</h2></header><div class="tbl-wrap" id="auditBox"><p class="empty">Caricamento…</p></div></section>
-  <section class="panel"><header><h2>Copia dei tuoi dati</h2></header><div class="body"><p class="muted" style="margin:0 0 12px;max-width:60ch">Il server fa un backup automatico ogni giorno e conserva gli ultimi 14. Puoi anche scaricare una copia completa dei dati in formato JSON da tenere al sicuro. Il file non è cifrato: conservalo con cura.</p><a class="btn" href="/api/export" download>Scarica una copia dei dati</a></div></section></div>`;
+  <section class="panel"><header><h2>Copia dei tuoi dati</h2></header><div class="body"><p class="muted" style="margin:0 0 12px;max-width:60ch">Il server fa un backup automatico ogni giorno e conserva gli ultimi 14. Puoi anche scaricare una copia completa dei dati in formato JSON da tenere al sicuro. Il file non è cifrato: conservalo con cura. I documenti allegati alle cartelle sono inclusi nei backup del server, ma non in questa copia.</p><a class="btn" href="/api/export" download>Scarica una copia dei dati</a></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
+
+/* ---------- documenti della cartella ---------- */
+const fmtSize=b=>b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1).replace('.',',')+' MB';
+const docIcon=m=>m.startsWith('image/')?'Immagine':m==='application/pdf'?'PDF':m.includes('word')||m.includes('opendocument')?'Documento':m.includes('sheet')?'Foglio':'Testo';
+async function loadDocs(){const box=$('#docBox');if(!box||!S.pid)return;
+  try{const r=await api('/api/files?patient='+encodeURIComponent(S.pid));
+    box.innerHTML=r.files.length?`<ul class="list">${r.files.map(f=>`<li><span class="chip">${docIcon(f.mime)}</span><div class="grow"><a href="/api/files/${f.id}" target="_blank" rel="noopener">${esc(f.name)}</a><div class="muted small">${fmtSize(f.size)} · ${new Date(f.created).toLocaleDateString('it-IT')}</div></div><a class="btn small" href="/api/files/${f.id}?download=1">Scarica</a><button type="button" class="btn small danger" data-act="docDel" data-id="${f.id}">Elimina</button></li>`).join('')}</ul>`:'<p class="muted small" style="margin:6px 0">Nessun documento. Puoi caricare referti, consensi firmati, relazioni o immagini.</p>'}
+  catch(e){box.innerHTML=`<p class="err" style="margin:6px 0">${e.status===401?'Sessione scaduta: accedi di nuovo.':'Documenti non disponibili.'}</p>`}}
+async function uploadDocs(files){
+  const list=[...files];let ok=0;
+  for(const f of list){
+    if(f.size>10*1024*1024){toast(`${f.name}: supera i 10 MB`);continue}
+    toast(`Caricamento di ${f.name}…`);
+    try{const r=await fetch('/api/files',{method:'POST',credentials:'same-origin',headers:{'X-PsicoLogo':'1','X-Patient-Id':S.pid,'X-File-Name':encodeURIComponent(f.name),'Content-Type':'application/octet-stream'},body:f});
+      const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Caricamento non riuscito');ok++}
+    catch(e){toast(`${f.name}: ${e.message}`)}
+  }
+  if(ok)toast(ok>1?`${ok} documenti caricati`:'Documento caricato');
+  loadDocs();
+}
+async function deleteDoc(id,btn){
+  if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.textContent='Conferma eliminazione';setTimeout(()=>{if(btn.isConnected){btn.dataset.sure='';btn.textContent='Elimina'}},4000);return}
+  try{await api('/api/files/'+id,{method:'DELETE'});toast('Documento eliminato');loadDocs()}catch(e){toast(e.message)}}
 
 /* ---------- modali ---------- */
 let onSubmit=null;
@@ -795,8 +826,54 @@ function apptDetail(id){
   modal(esc(full(p)),`<dl class="kv"><dt>Quando</dt><dd>${fmtLong(a.date)}, ${a.start}–${hhmm(toMin(a.start)+a.dur)}</dd><dt>Tipo</dt><dd>${a.type}</dd><dt>Studio</dt><dd>${esc(studio(a.studioId).nome)}</dd><dt>Tariffa</dt><dd>${euro(priceOf(a,DB.me))}</dd>${a.invoiceId?`<dt>Fattura</dt><dd class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</dd>`:''}</dl>
     <label class="fl">Stato<select name="status" id="dStatus" ${a.invoiceId?'disabled':''}>${Object.entries(STATI).map(([k,[l]])=>opt(k,l,a.status)).join('')}</select></label>
     ${note?`<div><div class="eyebrow">Nota di seduta</div><p style="margin:4px 0 0">${esc(note.text)}</p></div>`:''}`,
-    `${!a.invoiceId?`<button type="button" class="btn danger" data-act="delAppt" data-id="${a.id}">Elimina</button>`:''}<button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button>${a.status==='svolto'&&!note?`<button type="button" class="btn" data-act="note" data-id="${a.id}">Scrivi nota</button>`:''}<button class="btn primary">Salva</button>`,
+    `${!a.invoiceId?`<button type="button" class="btn danger" data-act="delAppt" data-id="${a.id}">Elimina</button>`:''}${!a.invoiceId?`<button type="button" class="btn" data-act="editAppt" data-id="${a.id}">Modifica</button>`:''}<button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button>${a.status==='svolto'&&!note?`<button type="button" class="btn" data-act="note" data-id="${a.id}">Scrivi nota</button>`:''}<button class="btn primary">Salva</button>`,
     f=>{if(f.status)a.status=f.status;toast('Appuntamento aggiornato')});
+}
+function apptEditForm(id){
+  const a=DB.appts.find(x=>x.id===id),p=pat(a.patientId);
+  if(a.invoiceId){toast('Appuntamento già fatturato: non si può modificare');return}
+  // appuntamenti successivi della stessa serie: stesso paziente, stesso giorno della settimana e stessa ora
+  const series=DB.appts.filter(x=>x.patientId===a.patientId&&x.id!==a.id&&x.status==='prenotato'&&!x.invoiceId&&x.date>a.date&&x.start===a.start&&wd(x.date)===wd(a.date));
+  const studiOpts=DB.studi.filter(s=>s.attivo!==false||s.id===a.studioId);
+  modal(`Modifica appuntamento · ${esc(full(p))}`,`<div class="fgrid">
+    <label>Data<input type="date" name="date" id="eDate" value="${a.date}" required></label>
+    <label>Ora<input type="time" name="start" id="eStart" value="${a.start}" step="900" required></label>
+    <label>Studio<select name="studioId" id="eStudio">${studiOpts.map(s=>opt(s.id,s.nome,a.studioId)).join('')}</select></label>
+    <label>Tipo<select name="type" id="eType">${[...new Set([...P_().tipi,a.type])].map(t=>opt(t,t,a.type)).join('')}</select></label>
+    <label>Durata<select name="dur" id="eDur">${[...new Set([30,45,50,60,90,a.dur])].sort((x,y)=>x-y).map(d=>opt(String(d),d+' minuti',String(a.dur))).join('')}</select></label>
+    <label>Stato<select name="status" id="eStatus">${Object.entries(STATI).map(([k,[l]])=>opt(k,l,a.status)).join('')}</select></label>
+    ${series.length?`<label class="check span2" style="border:0;padding:0;flex-direction:row;font-weight:400;color:var(--fg)"><input type="checkbox" name="series" id="eSeries"><span><b>${series.length===1?'Applica anche all’appuntamento successivo della serie':`Applica anche ai ${series.length} appuntamenti successivi della serie`}</b><br><span class="muted small">Stesso giorno e stessa ora ogni settimana: cambiano anche loro orario, studio, tipo e durata, e la data si sposta degli stessi giorni.</span></span></label>`:''}
+    <div class="span2 conflict" id="eConflict" hidden></div>
+    <p class="span2 muted" id="eWarn" style="margin:0;font-size:.85rem"></p></div>`,
+  `<button type="button" class="btn" data-act="appt" data-id="${a.id}">Annulla</button><button class="btn primary" id="eSave">Salva modifiche</button>`,
+  f=>{
+    if(!f.date||!f.start){toast('Indica data e ora');return false}
+    const shift=Math.round((parse(f.date)-parse(a.date))/86400000);
+    const s=toMin(f.start),e=s+ +f.dur;
+    const list=[a,...(f.series?series:[])];
+    const target=x=>x===a?f.date:iso(addDays(parse(x.date),shift));
+    // controllo PRIMA di salvare: quali appuntamenti occupano già il nuovo orario
+    const conf=[];
+    list.forEach(x=>{const nd=target(x);
+      DB.appts.filter(y=>!list.includes(y)&&y.date===nd&&y.status!=='disdetto'&&toMin(y.start)<e&&toMin(y.start)+y.dur>s).forEach(y=>conf.push(y))});
+    if(conf.length&&!confirmed){
+      confirmed=true;
+      const box=$('#eConflict');
+      box.innerHTML=`<b>Orario già occupato</b><ul>${conf.sort((x,y)=>(x.date+x.start).localeCompare(y.date+y.start)).map(y=>`<li>${cap(fmtLong(y.date))} alle ${y.start}–${hhmm(toMin(y.start)+y.dur)}: ${esc(full(pat(y.patientId)))} · ${esc(studio(y.studioId).nome)}</li>`).join('')}</ul><div><button type="button" class="btn small" data-pick="1">Scegli un altro orario</button></div>`;
+      box.hidden=false;$('#eSave').textContent='Salva comunque';box.scrollIntoView({block:'nearest'});
+      return false;
+    }
+    list.forEach(x=>Object.assign(x,{date:target(x),start:f.start,studioId:f.studioId,type:f.type,dur:+f.dur}));
+    a.status=f.status;
+    toast((list.length>1?`${list.length} appuntamenti modificati`:'Appuntamento modificato')+(conf.length?' · salvato sopra un orario già occupato':''));
+  });
+  let confirmed=false;
+  const resetConflict=()=>{confirmed=false;$('#eConflict').hidden=true;$('#eSave').textContent='Salva modifiche'};
+  ['#eDate','#eStart','#eDur','#eStudio','#eSeries'].forEach(sel=>{const el=$(sel);if(el)el.addEventListener('change',resetConflict)});
+  $('#eConflict').addEventListener('click',ev=>{if(ev.target.dataset.pick){resetConflict();$('#eStart').focus()}});
+  const hint=()=>{const d=$('#eDate').value,t=$('#eStart').value;if(!d||!t)return;const at=studioAt(d,t);
+    $('#eWarn').textContent=at?(at.id===$('#eStudio').value?`Di ${GIORNI[wd(d)]} alle ${t} sei a ${at.nome}.`:`A quell’ora di solito sei a ${at.nome}.`):'Fuori dai tuoi orari di studio.'};
+  ['#eDate','#eStart','#eStudio'].forEach(s=>$(s).addEventListener('change',hint));hint();
 }
 function noteForm({apptId,patientId}){
   const a=apptId&&DB.appts.find(x=>x.id===apptId);const p=pat(a?a.patientId:patientId);
@@ -929,6 +1006,7 @@ document.addEventListener('click',e=>{
     case 'newAppt':apptForm({patientId:el.dataset.p});break;
     case 'slot':{const r=el.getBoundingClientRect();const m=H0*60+Math.floor((e.clientY-r.top)/PX*4)*15;const t=hhmm(Math.min(m,H1*60-30));const at=studioAt(el.dataset.d,t);apptForm({date:el.dataset.d,start:t,studioId:at&&S.filter.includes(at.id)?at.id:undefined});break}
     case 'appt':apptDetail(id);break;
+    case 'editAppt':apptEditForm(id);break;
     case 'delAppt':DB.appts=DB.appts.filter(a=>a.id!==id);save();close();render();toast('Appuntamento eliminato');break;
     case 'status':{const a=DB.appts.find(x=>x.id===id);a.status=el.dataset.v;save();render();toast(`Segnato come ${STATI[a.status][0].toLowerCase()}`);break}
     case 'wk':S.week=el.dataset.v==='0'?0:S.week+ +el.dataset.v;S.day=null;render();break;
@@ -948,10 +1026,13 @@ document.addEventListener('click',e=>{
     case 'archStudio':archiveStudio(id);break;
     case 'reactStudio':studio(id).attivo=true;S.filter=null;save();render();toast(`${studio(id).nome} riattivato`);break;
     case 'editMe':meForm();break;
+    case 'docPick':$('#docUp').click();break;
+    case 'docDel':deleteDoc(id,el);break;
   }
 });
 document.addEventListener('change',e=>{
   const el=e.target;
+  if(el.id==='docUp'){if(el.files.length)uploadDocs(el.files);el.value='';return}
   if(el.id==='sedeSel'){S.studio=el.value;S.filter=null;render();return}
   if(!DB)return;
   const act=el.dataset.act,p=pat(S.pid);

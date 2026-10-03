@@ -46,9 +46,13 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, created INTEGER NOT NULL, last_seen INTEGER NOT NULL, ip TEXT, ua TEXT);
   CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, event TEXT NOT NULL, ip TEXT, detail TEXT);
   CREATE TABLE IF NOT EXISTS locks (key TEXT PRIMARY KEY, fails INTEGER NOT NULL, until INTEGER NOT NULL);
-  CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, patient_id TEXT NOT NULL, name TEXT NOT NULL, mime TEXT NOT NULL, size INTEGER NOT NULL, created INTEGER NOT NULL, enc BLOB NOT NULL);
+  CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, patient_id TEXT NOT NULL, category TEXT NOT NULL DEFAULT '', name TEXT NOT NULL, mime TEXT NOT NULL, size INTEGER NOT NULL, created INTEGER NOT NULL, enc BLOB NOT NULL);
   CREATE INDEX IF NOT EXISTS files_patient ON files (patient_id);
 `);
+// Aggiornamento dello schema per i database creati con versioni precedenti
+if (!db.prepare('PRAGMA table_info(files)').all().some(c => c.name === 'category')) {
+  db.exec("ALTER TABLE files ADD COLUMN category TEXT NOT NULL DEFAULT ''");
+}
 const q = {
   account: db.prepare('SELECT * FROM account WHERE id = 1'),
   insAccount: db.prepare('INSERT INTO account (id, username, pw_hash, created) VALUES (1, ?, ?, ?)'),
@@ -66,8 +70,8 @@ const q = {
   lock: db.prepare('SELECT * FROM locks WHERE key = ?'),
   setLock: db.prepare('INSERT INTO locks (key, fails, until) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET fails = excluded.fails, until = excluded.until'),
   delLock: db.prepare('DELETE FROM locks WHERE key = ?'),
-  insFile: db.prepare('INSERT INTO files (id, patient_id, name, mime, size, created, enc) VALUES (?, ?, ?, ?, ?, ?, ?)'),
-  listFiles: db.prepare('SELECT id, name, mime, size, created FROM files WHERE patient_id = ? ORDER BY created DESC'),
+  insFile: db.prepare('INSERT INTO files (id, patient_id, category, name, mime, size, created, enc) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+  listFiles: db.prepare('SELECT id, category, name, mime, size, created FROM files WHERE patient_id = ? ORDER BY created DESC'),
   file: db.prepare('SELECT * FROM files WHERE id = ?'),
   delFile: db.prepare('DELETE FROM files WHERE id = ?'),
 };
@@ -106,6 +110,8 @@ function decryptBuf(raw) {
   return Buffer.concat([d.update(buf.subarray(28)), d.final()]);
 }
 const MAX_FILE = 10 * 1024 * 1024; // 10 MB per documento
+// Categorie: '' = documenti della cartella; le altre = moduli di consenso firmati
+const FILE_CATEGORIES = new Set(['', 'informato', 'privacy', 'entrambi', 'ts']);
 // Solo questi formati; il tipo viene deciso dall'estensione, non da quanto dichiara il browser.
 const FILE_TYPES = {
   pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', heic: 'image/heic',
@@ -281,6 +287,8 @@ async function api(req, res, url) {
   if (url === '/api/files' && method === 'POST') {
     const pid = String(req.headers['x-patient-id'] || '');
     if (!/^[A-Za-z0-9_-]{1,40}$/.test(pid)) return send(res, 400, { error: 'Paziente non valido.' });
+    const category = String(req.headers['x-category'] || '');
+    if (!FILE_CATEGORIES.has(category)) return send(res, 400, { error: 'Categoria del documento non valida.' });
     let name = '';
     try { name = decodeURIComponent(String(req.headers['x-file-name'] || '')); } catch { name = ''; }
     name = name.replace(/[\\/\u0000-\u001f]/g, '_').trim().slice(0, 150);
@@ -290,8 +298,8 @@ async function api(req, res, url) {
     const buf = await readRaw(req, MAX_FILE);
     if (!buf.length) return send(res, 400, { error: 'Il file è vuoto.' });
     const id = crypto.randomBytes(12).toString('hex');
-    q.insFile.run(id, pid, name, mime, buf.length, Date.now(), encryptBuf(buf));
-    log('documento_caricato', ip, name);
+    q.insFile.run(id, pid, category, name, mime, buf.length, Date.now(), encryptBuf(buf));
+    log(category ? 'consenso_caricato' : 'documento_caricato', ip, name);
     return send(res, 200, { ok: true, id });
   }
   const fm = url.match(/^\/api\/files\/([a-f0-9]{24})$/);

@@ -252,6 +252,11 @@ textarea{width:100%;min-height:90px;padding:10px;border:1px solid var(--line);bo
 .sede-where{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 td.neg{color:var(--bad)}
 .doclist .list li{padding:8px 0}
+.consrow{border-top:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:6px}
+.consrow:first-child{border-top:0}
+.consrow .check{border:0;padding:0}
+.consdocs{margin-left:27px;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.consdocs .doclist{align-self:stretch}
 .conflict{border:1px solid var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--surface));border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:.9rem}
 .conflict b{color:var(--bad)}
 .conflict ul{margin:0;padding-left:18px}
@@ -332,6 +337,7 @@ td.neg{color:var(--bad)}
 </div>
 <div id="modal" class="modal" hidden><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
 <div id="toast" hidden></div>
+<input type="file" id="docUp" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.odt,.txt,.xlsx">
 
 <script>
 /* ---------- utilità ---------- */
@@ -513,7 +519,7 @@ function renderNav(){
   const n=activeStudi().length;$('#brandSub').textContent=`${n} ${n===1?'studio':'studi'} · ${P_().label.toLowerCase()}`;
   $('#me').innerHTML=`<div class="avatar" style="--pc:var(--accent)">${initials(DB.me)}</div><div class="who"><b>${esc(DB.me.nome+' '+DB.me.cognome)}</b><small>${esc(DB.me.qualifica||P_().label)}</small></div><div class="acts"><button data-act="go" data-v="profilo">Profilo</button><button data-act="logout">Esci</button></div>`;
 }
-function render(){if(!S.logged||!DB)return;renderNav();const m=$('#main');if(S.view==='profilo')setTimeout(loadAudit,0);if(S.view==='paziente'&&S.ptab==='cartella')setTimeout(loadDocs,0);m.innerHTML=({profilo:vProfile,oggi:vToday,agenda:vAgenda,pazienti:vPatients,paziente:vPatient,fatture:vBilling,studi:vStudi})[S.view]();if(S.view==='agenda')placeNow()}
+function render(){if(!S.logged||!DB)return;renderNav();const m=$('#main');if(S.view==='profilo')setTimeout(loadAudit,0);if(S.view==='paziente'&&(S.ptab==='cartella'||S.ptab==='consensi'))setTimeout(loadDocs,0);m.innerHTML=({profilo:vProfile,oggi:vToday,agenda:vAgenda,pazienti:vPatients,paziente:vPatient,fatture:vBilling,studi:vStudi})[S.view]();if(S.view==='agenda')placeNow()}
 
 /* ---------- Oggi ---------- */
 function vToday(){
@@ -627,7 +633,7 @@ function tCart(p){
     <div><div class="eyebrow">Documenti</div>
       <div id="docBox" class="doclist"><p class="muted small" style="margin:6px 0">Caricamento…</p></div>
       <div class="row" style="margin-top:8px"><button type="button" class="btn small" data-act="docPick">Carica documento</button><span class="muted small">PDF, immagini, Word, ODT, TXT, Excel · massimo 10 MB · salvati cifrati sul server</span></div>
-      <input type="file" id="docUp" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.odt,.txt,.xlsx"></div>
+</div>
     <div><div class="eyebrow">Obiettivi del progetto terapeutico</div>
       ${p.obiettivi.map((o,i)=>`<label class="goal ${o.d?'done':''}"><input type="checkbox" data-act="goal" data-i="${i}" ${o.d?'checked':''}><span>${esc(o.t)}</span></label>`).join('')||'<p class="muted small" style="margin:4px 0">Nessun obiettivo ancora.</p>'}
       <form class="row" data-form="goal" style="margin-top:6px"><input class="field" id="goalTxt" name="t" placeholder="Nuovo obiettivo" required style="flex:1 1 220px"><button class="btn small">Aggiungi</button></form></div>
@@ -658,12 +664,15 @@ function tTest(p){
 }
 function tCons(p){
   const c=p.consensi,min=ageOf(p.nascita)<18;
-  const row=(k,t,d)=>`<label class="check"><input type="checkbox" data-act="cons" data-k="${k}" ${c[k]?'checked':''}><span><b>${t}</b><br><span class="muted" style="font-size:.85rem">${d}</span></span></label>`;
+  const row=(k,t,d,checked,input,btn)=>`<div class="consrow"><label class="check">${input}<span><b>${t}</b><br><span class="muted" style="font-size:.85rem">${d}</span></span></label>
+    <div class="consdocs"><div id="cons-${k}" class="doclist"></div><button type="button" class="btn small" data-act="docPick" data-cat="${k}">${btn}</button></div></div>`;
+  const cb=k=>`<input type="checkbox" data-act="cons" data-k="${k}" ${c[k]?'checked':''}>`;
   return `<header><h2>Consensi e privacy</h2>${consensoOk(p)?'<span class="chip good">Completi</span>':'<span class="chip warn">Da completare</span>'}</header><div class="body">
-    ${row('informato','Consenso informato al trattamento','Firmato prima dell’inizio della presa in carico.')}
-    ${row('privacy','Informativa privacy (art. 13 GDPR)','Trattamento di dati relativi alla salute ai sensi dell’art. 9 GDPR.')}
-    ${min?row('entrambi','Firma di entrambi gli esercenti la responsabilità genitoriale','Per i minori serve il consenso di tutti gli esercenti la responsabilità genitoriale.'):''}
-    <label class="check"><input type="checkbox" data-act="ts" ${c.ts==='opposizione'?'checked':''}><span><b>Opposizione all’invio al Sistema Tessera Sanitaria</b><br><span class="muted" style="font-size:.85rem">Se attiva, le spese di questo paziente non vengono trasmesse per la dichiarazione precompilata.</span></span></label>
+    ${row('informato','Consenso informato al trattamento','Firmato prima dell’inizio della presa in carico.',c.informato,cb('informato'),'Carica il modulo firmato')}
+    ${row('privacy','Informativa privacy (art. 13 GDPR)','Trattamento di dati relativi alla salute ai sensi dell’art. 9 GDPR.',c.privacy,cb('privacy'),'Carica il modulo firmato')}
+    ${min?row('entrambi','Firma di entrambi gli esercenti la responsabilità genitoriale','Per i minori serve il consenso di tutti gli esercenti la responsabilità genitoriale.',c.entrambi,cb('entrambi'),'Carica il modulo firmato'):''}
+    ${row('ts','Opposizione all’invio al Sistema Tessera Sanitaria','Se attiva, le spese di questo paziente non vengono trasmesse per la dichiarazione precompilata.',c.ts==='opposizione',`<input type="checkbox" data-act="ts" ${c.ts==='opposizione'?'checked':''}>`,'Carica la richiesta di opposizione')}
+    <p class="muted small" style="margin:8px 0 0">Caricando un modulo firmato, la voce corrispondente viene segnata come firmata. I documenti sono salvati cifrati sul server.</p>
   </div>`;
 }
 function tAppts(p){
@@ -753,7 +762,7 @@ function vProfile(){
   <section class="panel"><header><h2>Copia dei tuoi dati</h2></header><div class="body"><p class="muted" style="margin:0 0 12px;max-width:60ch">Il server fa un backup automatico ogni giorno e conserva gli ultimi 14. Puoi anche scaricare una copia completa dei dati in formato JSON da tenere al sicuro. Il file non è cifrato: conservalo con cura. I documenti allegati alle cartelle sono inclusi nei backup del server, ma non in questa copia.</p><a class="btn" href="/api/export" download>Scarica una copia dei dati</a></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
@@ -761,19 +770,25 @@ async function loadAudit(){const box=$('#auditBox');if(!box)return;
 /* ---------- documenti della cartella ---------- */
 const fmtSize=b=>b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1).replace('.',',')+' MB';
 const docIcon=m=>m.startsWith('image/')?'Immagine':m==='application/pdf'?'PDF':m.includes('word')||m.includes('opendocument')?'Documento':m.includes('sheet')?'Foglio':'Testo';
-async function loadDocs(){const box=$('#docBox');if(!box||!S.pid)return;
+const docRow=f=>`<li><span class="chip">${docIcon(f.mime)}</span><div class="grow"><a href="/api/files/${f.id}" target="_blank" rel="noopener">${esc(f.name)}</a><div class="muted small">${fmtSize(f.size)} · ${new Date(f.created).toLocaleDateString('it-IT')}</div></div><a class="btn small" href="/api/files/${f.id}?download=1">Scarica</a><button type="button" class="btn small danger" data-act="docDel" data-id="${f.id}">Elimina</button></li>`;
+async function loadDocs(){
+  const boxes=[...document.querySelectorAll('#docBox,[id^="cons-"]')];if(!boxes.length||!S.pid)return;
   try{const r=await api('/api/files?patient='+encodeURIComponent(S.pid));
-    box.innerHTML=r.files.length?`<ul class="list">${r.files.map(f=>`<li><span class="chip">${docIcon(f.mime)}</span><div class="grow"><a href="/api/files/${f.id}" target="_blank" rel="noopener">${esc(f.name)}</a><div class="muted small">${fmtSize(f.size)} · ${new Date(f.created).toLocaleDateString('it-IT')}</div></div><a class="btn small" href="/api/files/${f.id}?download=1">Scarica</a><button type="button" class="btn small danger" data-act="docDel" data-id="${f.id}">Elimina</button></li>`).join('')}</ul>`:'<p class="muted small" style="margin:6px 0">Nessun documento. Puoi caricare referti, consensi firmati, relazioni o immagini.</p>'}
-  catch(e){box.innerHTML=`<p class="err" style="margin:6px 0">${e.status===401?'Sessione scaduta: accedi di nuovo.':'Documenti non disponibili.'}</p>`}}
+    boxes.forEach(box=>{const cat=box.id==='docBox'?'':box.id.slice(5);const fs=r.files.filter(f=>(f.category||'')===cat);
+      box.innerHTML=fs.length?`<ul class="list">${fs.map(docRow).join('')}</ul>`:(cat?'':'<p class="muted small" style="margin:6px 0">Nessun documento. Puoi caricare referti, relazioni o immagini.</p>')})}
+  catch(e){boxes.forEach(box=>box.innerHTML=`<p class="err" style="margin:6px 0">${e.status===401?'Sessione scaduta: accedi di nuovo.':'Documenti non disponibili.'}</p>`)}}
+let docCat='';
 async function uploadDocs(files){
   const list=[...files];let ok=0;
   for(const f of list){
     if(f.size>10*1024*1024){toast(`${f.name}: supera i 10 MB`);continue}
     toast(`Caricamento di ${f.name}…`);
-    try{const r=await fetch('/api/files',{method:'POST',credentials:'same-origin',headers:{'X-PsicoLogo':'1','X-Patient-Id':S.pid,'X-File-Name':encodeURIComponent(f.name),'Content-Type':'application/octet-stream'},body:f});
+    try{const r=await fetch('/api/files',{method:'POST',credentials:'same-origin',headers:{'X-PsicoLogo':'1','X-Patient-Id':S.pid,'X-Category':docCat,'X-File-Name':encodeURIComponent(f.name),'Content-Type':'application/octet-stream'},body:f});
       const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Caricamento non riuscito');ok++}
     catch(e){toast(`${f.name}: ${e.message}`)}
   }
+  const p=pat(S.pid);
+  if(ok&&p&&['informato','privacy','entrambi'].includes(docCat)&&!p.consensi[docCat]){p.consensi[docCat]=true;save();render();toast('Modulo caricato · voce segnata come firmata');return}
   if(ok)toast(ok>1?`${ok} documenti caricati`:'Documento caricato');
   loadDocs();
 }
@@ -1033,7 +1048,7 @@ document.addEventListener('click',e=>{
     case 'archStudio':archiveStudio(id);break;
     case 'reactStudio':studio(id).attivo=true;S.filter=null;save();render();toast(`${studio(id).nome} riattivato`);break;
     case 'editMe':meForm();break;
-    case 'docPick':$('#docUp').click();break;
+    case 'docPick':docCat=el.dataset.cat||'';$('#docUp').click();break;
     case 'docDel':deleteDoc(id,el);break;
   }
 });

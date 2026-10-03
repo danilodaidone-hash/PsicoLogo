@@ -1,0 +1,6 @@
+data/
+.env
+Caddyfile
+INDIRIZZO.txt
+node_modules/
+public/fonts/

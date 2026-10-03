@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - ./data:/data
+      - ./data:/data:Z          # :Z serve con SELinux (Oracle Linux), innocuo altrove
     ports:
       - "127.0.0.1:3000:3000"   # raggiungibile solo da Caddy, non da Internet
   caddy:
@@ -14,7 +14,7 @@ services:
     network_mode: host
     depends_on: [app]
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - caddy_data:/data
       - caddy_config:/config
 volumes:

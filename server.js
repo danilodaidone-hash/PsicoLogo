@@ -46,6 +46,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, created INTEGER NOT NULL, last_seen INTEGER NOT NULL, ip TEXT, ua TEXT);
   CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, event TEXT NOT NULL, ip TEXT, detail TEXT);
   CREATE TABLE IF NOT EXISTS locks (key TEXT PRIMARY KEY, fails INTEGER NOT NULL, until INTEGER NOT NULL);
+  CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, patient_id TEXT NOT NULL, name TEXT NOT NULL, mime TEXT NOT NULL, size INTEGER NOT NULL, created INTEGER NOT NULL, enc BLOB NOT NULL);
+  CREATE INDEX IF NOT EXISTS files_patient ON files (patient_id);
 `);
 const q = {
   account: db.prepare('SELECT * FROM account WHERE id = 1'),
@@ -64,6 +66,10 @@ const q = {
   lock: db.prepare('SELECT * FROM locks WHERE key = ?'),
   setLock: db.prepare('INSERT INTO locks (key, fails, until) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET fails = excluded.fails, until = excluded.until'),
   delLock: db.prepare('DELETE FROM locks WHERE key = ?'),
+  insFile: db.prepare('INSERT INTO files (id, patient_id, name, mime, size, created, enc) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+  listFiles: db.prepare('SELECT id, name, mime, size, created FROM files WHERE patient_id = ? ORDER BY created DESC'),
+  file: db.prepare('SELECT * FROM files WHERE id = ?'),
+  delFile: db.prepare('DELETE FROM files WHERE id = ?'),
 };
 const log = (event, ip, detail = '') => q.audit.run(Date.now(), event, ip || '', String(detail).slice(0, 200));
 
@@ -85,6 +91,36 @@ function encrypt(obj) {
   const c = crypto.createCipheriv('aes-256-gcm', KEY, iv);
   const body = Buffer.concat([c.update(JSON.stringify(obj), 'utf8'), c.final()]);
   return Buffer.concat([iv, c.getAuthTag(), body]).toString('base64');
+}
+// Documenti allegati: cifrati come i dati, conservati nel database (quindi inclusi nei backup)
+function encryptBuf(buf) {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', KEY, iv);
+  const body = Buffer.concat([c.update(buf), c.final()]);
+  return Buffer.concat([iv, c.getAuthTag(), body]);
+}
+function decryptBuf(raw) {
+  const buf = Buffer.from(raw);
+  const d = crypto.createDecipheriv('aes-256-gcm', KEY, buf.subarray(0, 12));
+  d.setAuthTag(buf.subarray(12, 28));
+  return Buffer.concat([d.update(buf.subarray(28)), d.final()]);
+}
+const MAX_FILE = 10 * 1024 * 1024; // 10 MB per documento
+// Solo questi formati; il tipo viene deciso dall'estensione, non da quanto dichiara il browser.
+const FILE_TYPES = {
+  pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', heic: 'image/heic',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  odt: 'application/vnd.oasis.opendocument.text', txt: 'text/plain; charset=utf-8',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
+const INLINE_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+function readRaw(req, max) {
+  return new Promise((resolve, reject) => {
+    let size = 0; const chunks = [];
+    req.on('data', c => { size += c.length; if (size > max) { reject(Object.assign(new Error('Il documento supera i 10 MB.'), { status: 413 })); req.destroy(); } else chunks.push(c); });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
 }
 function decrypt(b64) {
   const buf = Buffer.from(b64, 'base64');
@@ -236,6 +272,46 @@ async function api(req, res, url) {
     const name = `psicologo-backup-${new Date().toISOString().slice(0, 10)}.json`;
     return send(res, 200, JSON.stringify({ exported: new Date().toISOString(), version: d.version, data: decrypt(d.enc) }, null, 2),
       { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${name}"` });
+  }
+  // ---- documenti allegati alla cartella ----
+  if (url === '/api/files' && method === 'GET') {
+    const pid = new URL(req.url, 'http://x').searchParams.get('patient') || '';
+    return send(res, 200, { files: q.listFiles.all(pid) });
+  }
+  if (url === '/api/files' && method === 'POST') {
+    const pid = String(req.headers['x-patient-id'] || '');
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(pid)) return send(res, 400, { error: 'Paziente non valido.' });
+    let name = '';
+    try { name = decodeURIComponent(String(req.headers['x-file-name'] || '')); } catch { name = ''; }
+    name = name.replace(/[\\/\u0000-\u001f]/g, '_').trim().slice(0, 150);
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    const mime = FILE_TYPES[ext];
+    if (!name || !mime) return send(res, 400, { error: 'Formato non ammesso. Usa PDF, immagini (JPG, PNG, HEIC), Word, ODT, TXT o Excel.' });
+    const buf = await readRaw(req, MAX_FILE);
+    if (!buf.length) return send(res, 400, { error: 'Il file è vuoto.' });
+    const id = crypto.randomBytes(12).toString('hex');
+    q.insFile.run(id, pid, name, mime, buf.length, Date.now(), encryptBuf(buf));
+    log('documento_caricato', ip, name);
+    return send(res, 200, { ok: true, id });
+  }
+  const fm = url.match(/^\/api\/files\/([a-f0-9]{24})$/);
+  if (fm && method === 'GET') {
+    const f = q.file.get(fm[1]);
+    if (!f) return send(res, 404, { error: 'Documento non trovato.' });
+    const download = new URL(req.url, 'http://x').searchParams.has('download') || !INLINE_TYPES.has(f.mime);
+    log(download ? 'documento_scaricato' : 'documento_aperto', ip, f.name);
+    const ascii = f.name.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, "'");
+    return send(res, 200, decryptBuf(f.enc), {
+      'Content-Type': f.mime,
+      'Content-Disposition': `${download ? 'attachment' : 'inline'}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(f.name)}`,
+      'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
+    });
+  }
+  if (fm && method === 'DELETE') {
+    const f = q.file.get(fm[1]);
+    if (!f) return send(res, 404, { error: 'Documento non trovato.' });
+    q.delFile.run(f.id); log('documento_eliminato', ip, f.name);
+    return send(res, 200, { ok: true });
   }
   return send(res, 404, { error: 'Non trovato' });
 }

@@ -4,6 +4,6 @@
 SETUP_CODE="scegli-un-codice-lungo-e-segreto"
 REPO_URL="https://github.com/TUO-NOME-UTENTE/psicologo.git"
 # ===== Da qui in giù non serve modificare nulla =====
-apt-get update -y && apt-get install -y git
+if command -v apt-get >/dev/null; then apt-get update -y && apt-get install -y git; else dnf install -y git; fi
 git clone "$REPO_URL" /opt/psicologo
 SETUP_CODE="$SETUP_CODE" bash /opt/psicologo/install.sh

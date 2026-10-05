@@ -894,16 +894,27 @@ async function invoicePdf(id,mode){
   if(dirty||saving){clearTimeout(saveTimer);await flush()}
   const i=DB.invoices.find(x=>x.id===id),p=pat(i.patientId);
   if(mode==='open'){window.open('/api/invoices/'+id+'.pdf','_blank','noopener');return}
-  try{const r=await fetch('/api/invoices/'+id+'.pdf?download=1',{credentials:'same-origin'});if(!r.ok)throw new Error('PDF non disponibile');
-    const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fattura-${i.num.replace('/','-')}-${(p.cognome||'').replace(/[^A-Za-z0-9]/g,'')}.pdf`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000);
-    if(mode==='email'){
-      const subj=`Fattura n. ${i.num} – ${meName()}`;
-      const body=`Gentile ${p.tutori&&ageOf(p.nascita)<18&&p.tutori[0]?p.tutori[0].nome:full(p)},\n\nin allegato la fattura n. ${i.num} del ${fmtD(i.date)}, di importo ${euro(i.tot)}.\n\nCordiali saluti\n${meName()}`;
-      const to=p.email||'';
-      setTimeout(()=>{location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`},600);
-      toast('PDF scaricato: allegalo all’email che si sta aprendo');
-    }else toast('PDF scaricato nella cartella Download');
-  }catch(e){toast(e.message)}
+  const name=`Fattura-${i.num.replace('/','-')}-${(p.cognome||'').replace(/[^A-Za-z0-9]/g,'')}.pdf`;
+  const save=blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000)};
+  let blob;
+  try{const r=await fetch('/api/invoices/'+id+'.pdf?download=1',{credentials:'same-origin'});if(!r.ok)throw new Error('PDF non disponibile');blob=await r.blob()}
+  catch(e){toast(e.message);return}
+  if(mode!=='email'){save(blob);toast('PDF scaricato nella cartella Download');return}
+  const subj=`Fattura n. ${i.num} – ${meName()}`;
+  const body=`Gentile ${p.tutori&&ageOf(p.nascita)<18&&p.tutori[0]?p.tutori[0].nome:full(p)},\n\nin allegato la fattura n. ${i.num} del ${fmtD(i.date)}, di importo ${euro(i.tot)}.\n\nCordiali saluti\n${meName()}`;
+  const to=p.email||'';
+  let file=null,canShare=false;
+  try{file=new File([blob],name,{type:'application/pdf'});canShare=!!(navigator.canShare&&navigator.canShare({files:[file]}))}catch(e){}
+  modal('Invia la fattura per email',`
+    <p style="margin:0">Destinatario: <b>${to?esc(to):'nessuna email nella scheda paziente'}</b></p>
+    ${canShare?`<p style="margin:0"><b>Condividi con Mail</b> apre l'app di posta con il PDF <b>già allegato</b>, l'oggetto e il testo pronti${to?': copia o scegli il destinatario':''}.</p>`:
+      `<p style="margin:0">Questo browser non permette di allegare file in automatico. Il PDF viene scaricato e si apre l'email già compilata: <b>trascina il file dalla cartella Download nell'email</b>.</p>`}
+    <p class="muted small" style="margin:0">File: ${esc(name)}</p>`,
+    `<button type="button" class="btn" data-act="close">Annulla</button>${to&&canShare?`<button type="button" class="btn" id="mailCopy">Copia indirizzo</button>`:''}<button type="button" class="btn${canShare?'':' primary'}" id="mailDl">Scarica e apri email</button>${canShare?`<button type="button" class="btn primary" id="mailShare">Condividi con Mail</button>`:''}`);
+  const dl=$('#mailDl'),sh=$('#mailShare'),cp=$('#mailCopy');
+  dl.onclick=()=>{save(blob);close();setTimeout(()=>{location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`},600);toast('PDF scaricato: allegalo all’email che si sta aprendo')};
+  if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(to);toast('Indirizzo copiato')}catch(e){toast(to)}};
+  if(sh)sh.onclick=async()=>{try{await navigator.share({files:[file],title:subj,text:body});close();toast('Fattura condivisa')}catch(e){if(e.name!=='AbortError')toast('Condivisione non riuscita: usa “Scarica e apri email”')}};
 }
 
 /* ---------- backup sul computer ---------- */

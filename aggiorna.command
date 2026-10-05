@@ -20,6 +20,7 @@ FILES=(
   "server.js"
   "public/index.html"
   "scripts/fetch-fonts.js"
+  "scripts/reset-password.js"
   "Dockerfile"
   "docker-compose.yml"
   "install.sh"

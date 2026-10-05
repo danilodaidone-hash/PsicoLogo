@@ -111,7 +111,7 @@ function decryptBuf(raw) {
 }
 const MAX_FILE = 10 * 1024 * 1024; // 10 MB per documento
 // Categorie: '' = documenti della cartella; le altre = moduli di consenso firmati
-const FILE_CATEGORIES = new Set(['', 'informato', 'privacy', 'entrambi', 'ts']);
+const FILE_CATEGORIES = new Set(['', 'informato', 'privacy', 'entrambi', 'online', 'ts']);
 // Solo questi formati; il tipo viene deciso dall'estensione, non da quanto dichiara il browser.
 const FILE_TYPES = {
   pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', heic: 'image/heic',

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>PsicoLogo</title>
+<script>try{var u=JSON.parse(localStorage.getItem('pl_ui')||'{}'),r=document.documentElement;if(/^(classico|morbido|compatto|essenziale)$/.test(u.style))r.dataset.style=u.style;if(/^(oceano|lavanda|terracotta|ardesia|bosco|prugna|sabbia)$/.test(u.pal))r.dataset.pal=u.pal}catch(e){}</script>
 <style>
 @font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
 @font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
@@ -268,6 +269,80 @@ td.neg{color:var(--bad)}
 .conflict ul{margin:0;padding-left:18px}
 .ev.online{border-style:dashed;border-width:1.5px}
 .ev .on{font-weight:700;color:var(--pc)}
+/* Combinazioni di colori: chiaro e scuro, contrasto verificato (AA) */
+:root[data-pal="oceano"]{--bg:#F1F4F7; --surface:#FFFFFF; --surface-2:#E6ECF2; --fg:#141C26; --muted:#556275; --line:#D5DDE6; --accent:#1F5F99; --accent-soft:#DCE8F4; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="oceano"]:not([data-theme="light"]){--bg:#0D131A; --surface:#141B24; --surface-2:#1B2430; --fg:#E1E8F0; --muted:#94A2B4; --line:#29343F; --accent:#7DB4E8; --accent-soft:#1B2E42; --on-accent:#0D131A;}}
+:root[data-pal="oceano"][data-theme="dark"]{--bg:#0D131A; --surface:#141B24; --surface-2:#1B2430; --fg:#E1E8F0; --muted:#94A2B4; --line:#29343F; --accent:#7DB4E8; --accent-soft:#1B2E42; --on-accent:#0D131A;}
+:root[data-pal="lavanda"]{--bg:#F4F2F7; --surface:#FFFFFF; --surface-2:#ECE8F2; --fg:#1C1726; --muted:#625A72; --line:#DED8E7; --accent:#5B4B9A; --accent-soft:#E6E1F4; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="lavanda"]:not([data-theme="light"]){--bg:#121019; --surface:#191623; --surface-2:#221E2E; --fg:#E8E4F0; --muted:#A39CB3; --line:#322C3F; --accent:#B3A5EC; --accent-soft:#2A2442; --on-accent:#121019;}}
+:root[data-pal="lavanda"][data-theme="dark"]{--bg:#121019; --surface:#191623; --surface-2:#221E2E; --fg:#E8E4F0; --muted:#A39CB3; --line:#322C3F; --accent:#B3A5EC; --accent-soft:#2A2442; --on-accent:#121019;}
+:root[data-pal="terracotta"]{--bg:#F7F3F0; --surface:#FFFFFF; --surface-2:#F0E8E2; --fg:#241A15; --muted:#6B5B52; --line:#E6DAD2; --accent:#A0452A; --accent-soft:#F5E1D8; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="terracotta"]:not([data-theme="light"]){--bg:#17110E; --surface:#1F1814; --surface-2:#2A201B; --fg:#F0E6E0; --muted:#B3A196; --line:#3A2E27; --accent:#EE9878; --accent-soft:#3D2419; --on-accent:#17110E;}}
+:root[data-pal="terracotta"][data-theme="dark"]{--bg:#17110E; --surface:#1F1814; --surface-2:#2A201B; --fg:#F0E6E0; --muted:#B3A196; --line:#3A2E27; --accent:#EE9878; --accent-soft:#3D2419; --on-accent:#17110E;}
+:root[data-pal="ardesia"]{--bg:#F2F3F5; --surface:#FFFFFF; --surface-2:#E8EAEE; --fg:#1A1D23; --muted:#5C626E; --line:#D9DCE2; --accent:#3E4C63; --accent-soft:#E0E5EE; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="ardesia"]:not([data-theme="light"]){--bg:#111317; --surface:#181B20; --surface-2:#20242B; --fg:#E4E7EC; --muted:#9AA1AD; --line:#2E333B; --accent:#A9B8D1; --accent-soft:#252D3B; --on-accent:#111317;}}
+:root[data-pal="ardesia"][data-theme="dark"]{--bg:#111317; --surface:#181B20; --surface-2:#20242B; --fg:#E4E7EC; --muted:#9AA1AD; --line:#2E333B; --accent:#A9B8D1; --accent-soft:#252D3B; --on-accent:#111317;}
+:root[data-pal="bosco"]{--bg:#F1F4F0; --surface:#FFFFFF; --surface-2:#E6ECE4; --fg:#172014; --muted:#586654; --line:#D6DED3; --accent:#33642A; --accent-soft:#DDEBD8; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="bosco"]:not([data-theme="light"]){--bg:#0F140D; --surface:#161D14; --surface-2:#1E271B; --fg:#E3EBE0; --muted:#9AAA95; --line:#2B3627; --accent:#8FCB7F; --accent-soft:#213320; --on-accent:#0F140D;}}
+:root[data-pal="bosco"][data-theme="dark"]{--bg:#0F140D; --surface:#161D14; --surface-2:#1E271B; --fg:#E3EBE0; --muted:#9AAA95; --line:#2B3627; --accent:#8FCB7F; --accent-soft:#213320; --on-accent:#0F140D;}
+:root[data-pal="prugna"]{--bg:#F6F1F4; --surface:#FFFFFF; --surface-2:#EFE6EC; --fg:#24141E; --muted:#6B5565; --line:#E5D6DF; --accent:#8A2F6B; --accent-soft:#F3DDEB; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="prugna"]:not([data-theme="light"]){--bg:#160F13; --surface:#1E151B; --surface-2:#281C24; --fg:#F0E3EB; --muted:#B49CAC; --line:#3A2934; --accent:#E890C8; --accent-soft:#3A1E31; --on-accent:#160F13;}}
+:root[data-pal="prugna"][data-theme="dark"]{--bg:#160F13; --surface:#1E151B; --surface-2:#281C24; --fg:#F0E3EB; --muted:#B49CAC; --line:#3A2934; --accent:#E890C8; --accent-soft:#3A1E31; --on-accent:#160F13;}
+:root[data-pal="sabbia"]{--bg:#F6F4EE; --surface:#FFFFFF; --surface-2:#EEEADF; --fg:#221E15; --muted:#665F4F; --line:#E2DCCC; --accent:#735510; --accent-soft:#EFE6CC; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="sabbia"]:not([data-theme="light"]){--bg:#14120D; --surface:#1C1913; --surface-2:#26221A; --fg:#EEE9DD; --muted:#ADA58F; --line:#36312A; --accent:#DDB863; --accent-soft:#352C17; --on-accent:#14120D;}}
+:root[data-pal="sabbia"][data-theme="dark"]{--bg:#14120D; --surface:#1C1913; --surface-2:#26221A; --fg:#EEE9DD; --muted:#ADA58F; --line:#36312A; --accent:#DDB863; --accent-soft:#352C17; --on-accent:#14120D;}
+/* Stili dell'interfaccia */
+:root[data-style="classico"]{--f-display:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;--r:3px}
+[data-style="classico"] h1,[data-style="classico"] h2,[data-style="classico"] h3,[data-style="classico"] .brand b,[data-style="classico"] .stat b{font-weight:600;letter-spacing:0}
+[data-style="classico"] h1{font-size:1.95rem}
+[data-style="classico"] .eyebrow,[data-style="classico"] th{letter-spacing:.14em}
+[data-style="classico"] .panel>header{background:var(--surface-2)}
+[data-style="classico"] .login-card{border-radius:4px;box-shadow:none;border-top:4px solid var(--accent)}
+[data-style="classico"] .chip,[data-style="classico"] .badge{border-radius:3px}
+:root[data-style="morbido"]{--f-display:ui-rounded,"SF Pro Rounded","Nunito","Varela Round","Segoe UI",system-ui,sans-serif;--f-body:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",system-ui,sans-serif;--r:14px}
+[data-style="morbido"] .btn,[data-style="morbido"] nav button,[data-style="morbido"] .pw button{border-radius:99px}
+[data-style="morbido"] .btn{padding-inline:16px}
+[data-style="morbido"] .panel,[data-style="morbido"] .stat{border-color:color-mix(in srgb,var(--line) 55%,transparent);box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05)}
+[data-style="morbido"] .side{border-right-color:transparent;background:var(--surface-2)}
+[data-style="morbido"] .login-card{border-radius:24px}
+[data-style="morbido"] h1,[data-style="morbido"] h2,[data-style="morbido"] h3,[data-style="morbido"] .brand b{letter-spacing:0}
+:root[data-style="compatto"]{--r:6px}
+[data-style="compatto"] body{font-size:14px;line-height:1.4}
+[data-style="compatto"] h1{font-size:1.45rem}
+[data-style="compatto"] main{gap:14px;padding-block:16px 40px}
+[data-style="compatto"] .side{padding:14px 10px;gap:12px}
+[data-style="compatto"] nav button{padding:6px 10px}
+[data-style="compatto"] .panel>header{padding:9px 12px}
+[data-style="compatto"] .panel .body{padding:10px 12px}
+[data-style="compatto"] .list li{padding:7px 12px;gap:10px}
+[data-style="compatto"] th{padding:7px 10px}
+[data-style="compatto"] td{padding:6px 10px}
+[data-style="compatto"] .stat{padding:9px 12px}
+[data-style="compatto"] .stat b{font-size:1.35rem}
+[data-style="compatto"] .stats{gap:8px}
+[data-style="compatto"] .two{gap:10px}
+[data-style="compatto"] .btn{padding:5px 11px;font-size:.85rem}
+[data-style="compatto"] .field,[data-style="compatto"] input[type=search]{padding:6px 9px}
+:root[data-style="essenziale"]{--f-display:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--r:6px}
+[data-style="essenziale"] .side{background:var(--bg)}
+[data-style="essenziale"] nav button[aria-current="page"]{background:none;box-shadow:inset 3px 0 0 var(--accent);border-radius:0 var(--r) var(--r) 0}
+[data-style="essenziale"] .panel>header{border-bottom-color:transparent;padding-bottom:4px}
+[data-style="essenziale"] h1{font-weight:650;letter-spacing:-.02em}
+[data-style="essenziale"] .login{background:var(--bg)}
+[data-style="essenziale"] .login-card{box-shadow:none}
+a{color:var(--accent);text-underline-offset:2px}
+a:hover{text-decoration-thickness:2px}
+/* Pannello Aspetto */
+.uiopts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.uiopt{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px;cursor:pointer;color:var(--fg);min-width:0}
+.uiopt:hover{border-color:var(--accent)}
+.uiopt[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.uiopt .aa{font-size:1.6rem;line-height:1;font-weight:700}
+.uiopt b{font-size:.9rem}
+.uiopt small{color:var(--muted);font-size:.75rem;line-height:1.3}
+.uiopt .sw{display:flex;width:100%;height:30px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.uiopt .sw i{flex:1}
+.uiopt .sw i:first-child{flex:2}
 </style>
 </head>
 <body>
@@ -549,7 +624,7 @@ function renderNav(){
   const n=activeStudi().length;$('#brandSub').textContent=`${n} ${n===1?'studio':'studi'} · ${P_().label.toLowerCase()}`;
   $('#me').innerHTML=`<div class="avatar" style="--pc:var(--accent)">${initials(DB.me)}</div><div class="who"><b>${esc(DB.me.nome+' '+DB.me.cognome)}</b><small>${esc(DB.me.qualifica||P_().label)}</small></div><div class="acts"><button data-act="go" data-v="profilo">Profilo</button><button data-act="logout">Esci</button></div>`;
 }
-function render(){if(!S.logged||!DB)return;renderNav();const m=$('#main');if(S.view==='profilo')setTimeout(loadAudit,0);if(S.view==='paziente'&&(S.ptab==='cartella'||S.ptab==='consensi'))setTimeout(loadDocs,0);m.innerHTML=({profilo:vProfile,oggi:vToday,agenda:vAgenda,pazienti:vPatients,paziente:vPatient,fatture:vBilling,studi:vStudi})[S.view]();if(S.view==='agenda')placeNow()}
+function render(){if(!S.logged||!DB)return;applyUI();renderNav();const m=$('#main');if(S.view==='profilo')setTimeout(loadAudit,0);if(S.view==='paziente'&&(S.ptab==='cartella'||S.ptab==='consensi'))setTimeout(loadDocs,0);m.innerHTML=({profilo:vProfile,oggi:vToday,agenda:vAgenda,pazienti:vPatients,paziente:vPatient,fatture:vBilling,studi:vStudi})[S.view]();if(S.view==='agenda')placeNow()}
 
 /* ---------- Oggi ---------- */
 function vToday(){
@@ -791,6 +866,7 @@ function vProfile(){
     <label class="fl" for="pwN2">Ripeti la nuova password<input type="password" id="pwN2" name="n2" autocomplete="new-password" required></label>
     <p class="muted small" style="margin:0">Almeno 10 caratteri. Cambiandola, gli altri dispositivi collegati vengono disconnessi.</p>
     <div><button class="btn primary">Aggiorna password</button></div></form></section></div>
+  ${vAspetto()}
   <div class="two"><section class="panel"><header><h2>Logo</h2></header><div class="body row" style="gap:16px;align-items:center;flex-wrap:nowrap">
     <div class="logoprev">${LOGO_VER?`<img src="/api/logo.png?v=${LOGO_VER}" alt="Logo attuale">`:'<span class="muted small">PsicoLogo</span>'}</div>
     <div style="display:flex;flex-direction:column;gap:8px;min-width:0"><p class="muted small" style="margin:0">Il tuo logo compare nella barra laterale, nella schermata di accesso, nell’icona del browser e sulle fatture in PDF. PNG o JPG, meglio quadrato o orizzontale.</p>
@@ -856,13 +932,27 @@ function newRecoveryForm(){
 }
 
 /* ---------- logo personalizzato ---------- */
+const PALETTE={"salvia":["Salvia","#F2F4F3","#2C6B5E","#DCEBE6","#6CC0AA","#0E1412"],"oceano":["Oceano","#F1F4F7","#1F5F99","#DCE8F4","#7DB4E8","#0D131A"],"lavanda":["Lavanda","#F4F2F7","#5B4B9A","#E6E1F4","#B3A5EC","#121019"],"terracotta":["Terracotta","#F7F3F0","#A0452A","#F5E1D8","#EE9878","#17110E"],"ardesia":["Ardesia","#F2F3F5","#3E4C63","#E0E5EE","#A9B8D1","#111317"],"bosco":["Bosco","#F1F4F0","#33642A","#DDEBD8","#8FCB7F","#0F140D"],"prugna":["Prugna","#F6F1F4","#8A2F6B","#F3DDEB","#E890C8","#160F13"],"sabbia":["Sabbia","#F6F4EE","#735510","#EFE6CC","#DDB863","#14120D"]};
+const STILI=[['moderno','Moderno','Pulito e molto leggibile (predefinito)','"Bricolage Grotesque",system-ui'],['classico','Classico','Titoli con grazie, toni sobri','"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif'],['morbido','Morbido','Angoli arrotondati e pulsanti a pillola','ui-rounded,"SF Pro Rounded","Nunito",system-ui'],['compatto','Compatto','Più righe in liste, agenda e tabelle','"Bricolage Grotesque",system-ui'],['essenziale','Essenziale','Carattere del dispositivo, linee minime','system-ui,-apple-system,"Segoe UI",sans-serif']];
+function uiPrefs(){const u=(DB&&DB.me&&DB.me.ui)||{};return{style:STILI.some(x=>x[0]===u.style)?u.style:'moderno',pal:PALETTE[u.pal]?u.pal:'salvia'}}
+function applyUI(){const u=uiPrefs(),r=document.documentElement;
+  if(u.style==='moderno')delete r.dataset.style;else r.dataset.style=u.style;
+  if(u.pal==='salvia')delete r.dataset.pal;else r.dataset.pal=u.pal;
+  try{localStorage.setItem('pl_ui',JSON.stringify(u))}catch(e){}
+  if(!LOGO_VER)applyLogo(null)}
+function setUI(k,v){DB.me.ui={...uiPrefs(),[k]:v};applyUI();save();render()}
+function vAspetto(){const u=uiPrefs();
+  return `<section class="panel"><header><h2>Aspetto</h2><span class="muted small">Vale su tutti i tuoi dispositivi</span></header><div class="body" style="display:flex;flex-direction:column;gap:16px">
+    <div><h3 style="margin-bottom:8px">Stile</h3><div class="uiopts">${STILI.map(([k,n,d,f])=>`<button type="button" class="uiopt" data-act="uiStyle" data-v="${k}" aria-pressed="${u.style===k}"><span class="aa" style="font-family:${f.replace(/"/g,'&quot;')}">Aa</span><b>${n}</b><small>${d}</small></button>`).join('')}</div></div>
+    <div><h3 style="margin-bottom:8px">Colori</h3><div class="uiopts">${Object.entries(PALETTE).map(([k,[n,bg,ac,so,dac,dbg]])=>`<button type="button" class="uiopt" data-act="uiPal" data-v="${k}" aria-pressed="${u.pal===k}"><span class="sw" aria-hidden="true"><i style="background:${ac}"></i><i style="background:${so}"></i><i style="background:${bg}"></i><i style="background:${dbg}"></i><i style="background:${dac}"></i></span><b>${n}</b></button>`).join('')}</div>
+    <p class="muted small" style="margin:8px 0 0">Ogni combinazione ha una versione chiara e una scura: si usa quella scelta nelle impostazioni del dispositivo.</p></div></div></section>`}
 function applyLogo(ver){
   LOGO_VER=ver||null;
   document.querySelectorAll('.brand').forEach(b=>{let img=b.querySelector('img.brandlogo');const svg=b.querySelector('svg');
     if(!img){img=document.createElement('img');img.className='brandlogo';img.alt='Logo';b.prepend(img)}
     if(LOGO_VER){img.src='/api/logo.png?v='+LOGO_VER;img.hidden=false;if(svg)svg.style.display='none'}else{img.hidden=true;img.removeAttribute('src');if(svg)svg.style.display=''}});
   let ic=document.querySelector('link[rel="icon"]');if(!ic){ic=document.createElement('link');ic.rel='icon';document.head.append(ic)}
-  ic.href=LOGO_VER?'/api/logo.png?v='+LOGO_VER:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="#2C6B5E"/><circle cx="17" cy="21" r="3" fill="#fff"/></svg>');
+  ic.href=LOGO_VER?'/api/logo.png?v='+LOGO_VER:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="'+((getComputedStyle(document.documentElement).getPropertyValue('--accent')||'').trim()||'#2C6B5E')+'"/><circle cx="17" cy="21" r="3" fill="#fff"/></svg>');
 }
 async function uploadLogo(file){
   if(!/^image\/(png|jpeg)$/.test(file.type)){toast('Usa un’immagine PNG o JPG');return}
@@ -1224,6 +1314,8 @@ document.addEventListener('click',e=>{
     case 'newRec':newRecoveryForm();break;
     case 'bkDown':backupDownloadForm();break;
     case 'about':aboutModal(false);break;
+    case 'uiStyle':setUI('style',el.dataset.v);break;
+    case 'uiPal':setUI('pal',el.dataset.v);toast('Colori: '+PALETTE[el.dataset.v][0]);break;
     case 'logoPick':$('#logoUp').click();break;
     case 'logoReset':removeLogo();break;
     case 'pdfOpen':invoicePdf(id,'open');break;

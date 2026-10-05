@@ -252,6 +252,12 @@ textarea{width:100%;min-height:90px;padding:10px;border:1px solid var(--line);bo
 .sede-where{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 td.neg{color:var(--bad)}
 .doclist .list li{padding:8px 0}
+.brandlogo{width:40px;height:40px;object-fit:contain;border-radius:8px;flex:none;background:var(--surface)}
+.side .brandlogo{width:34px;height:34px}
+.lictext{white-space:pre-wrap;font-family:var(--f-mono);font-size:.78rem;line-height:1.5;max-height:46vh;overflow:auto;background:var(--surface-2);border-radius:var(--r);padding:12px 14px;margin:0}
+.logoprev{width:96px;height:96px;border:1px dashed var(--line);border-radius:var(--r);display:grid;place-items:center;background:var(--surface);overflow:hidden;flex:none}
+.logoprev img{max-width:100%;max-height:100%;object-fit:contain}
+.copy{font-size:.72rem;color:var(--muted);margin:0}
 .consrow{border-top:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:6px}
 .consrow:first-child{border-top:0}
 .consrow .check{border:0;padding:0}
@@ -292,6 +298,7 @@ td.neg{color:var(--bad)}
       <button type="button" class="linkbtn small" data-act="hideRecover" style="align-self:center">Torna all’accesso</button>
     </form>
         <p class="muted small" style="margin:0">Connessione cifrata. Dopo 5 tentativi sbagliati l’accesso si blocca per 15 minuti.</p>
+    <p class="copy">© 2026 Danilo Daidone · PsicoLogo · <button type="button" class="linkbtn" data-act="about">Informazioni e licenza</button></p>
   </div>
 </div>
 
@@ -327,6 +334,7 @@ td.neg{color:var(--bad)}
         <label>Ripeti password<input type="password" name="pw2" id="su-pw2" autocomplete="new-password" required></label>
       </fieldset>
       <label class="check" style="border:0;padding:0"><input type="checkbox" name="sample" id="su-sample" checked><span><b>Inserisci pazienti e appuntamenti di esempio</b><br><span class="muted small">Utile per provare. Tre studi e dieci pazienti di fantasia, che potrai cancellare.</span></span></label>
+      <label class="check" style="border:0;padding:0"><input type="checkbox" name="lic" id="su-lic"><span>Ho letto e accetto le <button type="button" class="linkbtn" data-act="about">condizioni di licenza d’uso</button></span></label>
       <p id="suErr" class="err" role="alert" hidden></p>
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="suBtn">Crea il mio gestionale</button></div>
     </form>
@@ -344,12 +352,13 @@ td.neg{color:var(--bad)}
     <nav id="nav" aria-label="Sezioni"></nav>
     <div class="sync" id="sync" role="status">Salvato</div>
     <div class="me" id="me"></div>
-    <p class="demo">Versione di prova su server. Usa solo dati di fantasia finché il server non è stato verificato.</p>
+    <p class="demo">Versione di prova su server. Usa solo dati di fantasia finché il server non è stato verificato.<br>© 2026 Danilo Daidone · <button data-act="about">Licenza</button></p>
   </aside>
   <main id="main"></main>
 </div>
 <div id="modal" class="modal" hidden><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
 <div id="toast" hidden></div>
+<input type="file" id="logoUp" hidden accept="image/png,image/jpeg">
 <input type="file" id="docUp" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.odt,.txt,.xlsx">
 
 <script>
@@ -469,7 +478,7 @@ function makeInvoice(db,pat,list,date){
 }
 
 /* ---------- stato ---------- */
-let DB=null,VER=0,USERNAME='',HAS_REC=false,LAST_BACKUP=null;
+let DB=null,VER=0,USERNAME='',HAS_REC=false,LAST_BACKUP=null,LOGO_VER=null,APP_V='',LIC={accepted:false,ts:null,v:''};
 const backupDue=()=>!LAST_BACKUP||Date.now()-LAST_BACKUP>7*864e5;
 const backupAgo=()=>{if(!LAST_BACKUP)return 'mai';const g=Math.floor((Date.now()-LAST_BACKUP)/864e5);return g===0?'oggi':g===1?'ieri':`${g} giorni fa`};
 /* ---------- comunicazione con il server ---------- */
@@ -522,7 +531,7 @@ function studioAt(date,time){const m=toMin(time);return studiDelGiorno(date).fin
 
 /* ---------- accesso ---------- */
 function screen(name){$('#login').hidden=name!=='login';$('#setup').hidden=name!=='setup';$('.app').hidden=name!=='app'}
-function enterApp(){S.logged=true;S.view='oggi';S.pid=null;S.q='';S.studio='tutti';S.filter=null;screen('app');setSync('Salvato');render();window.scrollTo(0,0)}
+function enterApp(){setTimeout(checkLicense,300);S.logged=true;S.view='oggi';S.pid=null;S.q='';S.studio='tutti';S.filter=null;screen('app');setSync('Salvato');render();window.scrollTo(0,0)}
 function showLogin(msg){S.logged=false;DB=null;dirty=false;close();screen('login');$('#recoverForm').hidden=true;$('#loginForm').hidden=false;
   $('#lgPw').value='';const err=$('#lgErr');err.textContent=msg||'';err.hidden=!msg;$('#lgUser').focus();}
 function showSetup(){close();screen('setup');$('#suErr').hidden=true;window.scrollTo(0,0)}
@@ -782,6 +791,14 @@ function vProfile(){
     <label class="fl" for="pwN2">Ripeti la nuova password<input type="password" id="pwN2" name="n2" autocomplete="new-password" required></label>
     <p class="muted small" style="margin:0">Almeno 10 caratteri. Cambiandola, gli altri dispositivi collegati vengono disconnessi.</p>
     <div><button class="btn primary">Aggiorna password</button></div></form></section></div>
+  <div class="two"><section class="panel"><header><h2>Logo</h2></header><div class="body row" style="gap:16px;align-items:center;flex-wrap:nowrap">
+    <div class="logoprev">${LOGO_VER?`<img src="/api/logo.png?v=${LOGO_VER}" alt="Logo attuale">`:'<span class="muted small">PsicoLogo</span>'}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:0"><p class="muted small" style="margin:0">Il tuo logo compare nella barra laterale, nella schermata di accesso, nell’icona del browser e sulle fatture in PDF. PNG o JPG, meglio quadrato o orizzontale.</p>
+      <div class="row"><button type="button" class="btn small primary" data-act="logoPick">Carica logo</button>${LOGO_VER?'<button type="button" class="btn small" data-act="logoReset">Ripristina logo PsicoLogo</button>':''}</div></div></div></section>
+  <section class="panel"><header><h2>Informazioni e licenza</h2></header><div class="body" style="display:flex;flex-direction:column;gap:8px">
+    <p style="margin:0"><b>PsicoLogo</b>${APP_V?` · versione ${esc(APP_V)}`:''}<br><span class="muted small">© 2026 Danilo Daidone. Tutti i diritti riservati.</span></p>
+    ${LIC.ts?`<p class="muted small" style="margin:0">Condizioni di licenza accettate il ${new Date(LIC.ts).toLocaleDateString('it-IT')}.</p>`:''}
+    <div><button type="button" class="btn small" data-act="about">Leggi le condizioni di licenza</button></div></div></section></div>
   <section class="panel"><header><h2>Codice di recupero</h2>${HAS_REC?'<span class="chip good">Attivo</span>':'<span class="chip bad">Non creato</span>'}</header><div class="body row" style="justify-content:space-between;align-items:center">
     <p class="muted" style="margin:0;max-width:62ch">${HAS_REC?'Serve se dimentichi la password. Se l’hai perso o pensi che qualcuno l’abbia visto, generane uno nuovo: il precedente smette di funzionare.':'Non hai ancora un codice di recupero: se dimentichi la password non potresti rientrare da solo. Crealo adesso e conservalo al sicuro.'}</p>
     <button type="button" class="btn ${HAS_REC?'':'primary'}" data-act="newRec">${HAS_REC?'Genera un nuovo codice':'Crea il codice di recupero'}</button></div></section>
@@ -789,7 +806,7 @@ function vProfile(){
   <section class="panel" id="backup"><header><h2>Backup sul tuo computer</h2>${backupDue()?'<span class="chip warn">Da fare</span>':'<span class="chip good">Aggiornato</span>'}</header><div class="body" style="display:flex;flex-direction:column;gap:12px"><p class="muted" style="margin:0;max-width:62ch">Ultimo backup scaricato: <b>${backupAgo()}</b>. Il file contiene tutti i dati e i documenti, cifrati con una password che scegli tu. Il server fa anche un backup automatico ogni giorno, ma sullo stesso server: una copia sul tuo computer ti protegge se il server si guasta. Ti consigliamo di scaricarlo ogni settimana.</p><div class="row"><button type="button" class="btn primary" data-act="bkDown">Scarica il backup</button><button type="button" class="btn" data-act="bkRestore">Ripristina da un backup</button></div></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',fattura_pdf:'Fattura in PDF',logo_cambiato:'Logo cambiato',logo_rimosso:'Logo rimosso',licenza_accettata:'Condizioni di licenza accettate',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
@@ -836,6 +853,57 @@ function newRecoveryForm(){
     <label class="fl" for="nrPw">Password attuale<input type="password" id="nrPw" name="pw" autocomplete="current-password"></label>`,
     `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Genera il codice</button>`,
     f=>{(async()=>{try{const r=await api('/api/recovery/new',{method:'POST',body:{password:f.pw}});HAS_REC=true;showRecoveryCode(r.recoveryCode,'Ecco il nuovo codice di recupero. Quello precedente non vale più.')}catch(e){toast(e.message)}})();return false});
+}
+
+/* ---------- logo personalizzato ---------- */
+function applyLogo(ver){
+  LOGO_VER=ver||null;
+  document.querySelectorAll('.brand').forEach(b=>{let img=b.querySelector('img.brandlogo');const svg=b.querySelector('svg');
+    if(!img){img=document.createElement('img');img.className='brandlogo';img.alt='Logo';b.prepend(img)}
+    if(LOGO_VER){img.src='/api/logo.png?v='+LOGO_VER;img.hidden=false;if(svg)svg.style.display='none'}else{img.hidden=true;img.removeAttribute('src');if(svg)svg.style.display=''}});
+  let ic=document.querySelector('link[rel="icon"]');if(!ic){ic=document.createElement('link');ic.rel='icon';document.head.append(ic)}
+  ic.href=LOGO_VER?'/api/logo.png?v='+LOGO_VER:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="#2C6B5E"/><circle cx="17" cy="21" r="3" fill="#fff"/></svg>');
+}
+async function uploadLogo(file){
+  if(!/^image\/(png|jpeg)$/.test(file.type)){toast('Usa un’immagine PNG o JPG');return}
+  if(file.size>8*1024*1024){toast('L’immagine supera gli 8 MB');return}
+  try{
+    const url=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.onerror=ko;fr.readAsDataURL(file)});const img=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ko(new Error('Immagine non leggibile'));i.src=url});
+    const k=Math.min(1,600/Math.max(img.naturalWidth,img.naturalHeight));const w=Math.max(1,Math.round(img.naturalWidth*k)),hh=Math.max(1,Math.round(img.naturalHeight*k));
+    const c=document.createElement('canvas');c.width=w;c.height=hh;const g=c.getContext('2d');g.drawImage(img,0,0,w,hh);const png=c.toDataURL('image/png');
+    const c2=document.createElement('canvas');c2.width=w;c2.height=hh;const g2=c2.getContext('2d');g2.fillStyle='#fff';g2.fillRect(0,0,w,hh);g2.drawImage(img,0,0,w,hh);const jpg=c2.toDataURL('image/jpeg',0.9);
+    const r=await api('/api/logo',{method:'POST',body:{png,jpg}});applyLogo(r.logo);render();toast('Logo aggiornato: compare anche sulle fatture in PDF');
+  }catch(e){toast(e.message||'Immagine non leggibile')}
+}
+async function removeLogo(){try{await api('/api/logo',{method:'DELETE'});applyLogo(null);render();toast('Ripristinato il logo di PsicoLogo')}catch(e){toast(e.message)}}
+
+/* ---------- informazioni e licenza ---------- */
+async function aboutModal(acceptMode){
+  let txt='';try{const r=await fetch('/api/license');txt=await r.text()}catch(e){txt='Testo della licenza non disponibile.'}
+  modal(acceptMode?'Condizioni di licenza d’uso':'Informazioni e licenza',`<div class="row" style="gap:14px;align-items:center"><div><b>PsicoLogo</b>${APP_V?` · versione ${esc(APP_V)}`:''}<br><span class="muted small">© 2026 Danilo Daidone. Tutti i diritti riservati.</span></div></div>
+    ${acceptMode?'<p class="callout" style="margin:0">Le condizioni di licenza sono state aggiunte o aggiornate. Leggile e accettale per continuare a usare PsicoLogo.</p>':(LIC.ts?`<p class="muted small" style="margin:0">Condizioni accettate il ${new Date(LIC.ts).toLocaleDateString('it-IT')} (versione ${esc(LIC.v)}).</p>`:'')}
+    <pre class="lictext">${esc(txt)}</pre>`,
+    acceptMode?`<button type="button" class="btn" data-act="logout">Esci</button><button class="btn primary">Accetto le condizioni</button>`:`<button class="btn primary">Chiudi</button>`,
+    acceptMode?(()=>{(async()=>{try{await api('/api/license/accept',{method:'POST'});LIC={accepted:true,ts:Date.now(),v:LIC.v};toast('Condizioni accettate')}catch(e){toast(e.message)}})()}):null);
+}
+async function refreshStatus(){try{const s=await api('/api/status');APP_V=s.version||'';LIC={accepted:!!s.licenseAccepted,ts:s.licenseAcceptedAt,v:s.licenseVersion};applyLogo(s.logo);return s}catch(e){return null}}
+async function checkLicense(){const s=await refreshStatus();if(s&&s.logged&&!s.licenseAccepted)aboutModal(true)}
+
+/* ---------- fatture in PDF ---------- */
+async function invoicePdf(id,mode){
+  if(dirty||saving){clearTimeout(saveTimer);await flush()}
+  const i=DB.invoices.find(x=>x.id===id),p=pat(i.patientId);
+  if(mode==='open'){window.open('/api/invoices/'+id+'.pdf','_blank','noopener');return}
+  try{const r=await fetch('/api/invoices/'+id+'.pdf?download=1',{credentials:'same-origin'});if(!r.ok)throw new Error('PDF non disponibile');
+    const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fattura-${i.num.replace('/','-')}-${(p.cognome||'').replace(/[^A-Za-z0-9]/g,'')}.pdf`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000);
+    if(mode==='email'){
+      const subj=`Fattura n. ${i.num} – ${meName()}`;
+      const body=`Gentile ${p.tutori&&ageOf(p.nascita)<18&&p.tutori[0]?p.tutori[0].nome:full(p)},\n\nin allegato la fattura n. ${i.num} del ${fmtD(i.date)}, di importo ${euro(i.tot)}.\n\nCordiali saluti\n${meName()}`;
+      const to=p.email||'';
+      setTimeout(()=>{location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`},600);
+      toast('PDF scaricato: allegalo all’email che si sta aprendo');
+    }else toast('PDF scaricato nella cartella Download');
+  }catch(e){toast(e.message)}
 }
 
 /* ---------- backup sul computer ---------- */
@@ -1048,7 +1116,7 @@ function invDetail(id){
       <tr class="tot"><td>Totale</td><td class="r num">${euro(i.tot)}</td></tr></tbody></table>
     <p class="legal">${legal}</p></div>
     <label class="check" style="border:0"><input type="checkbox" name="paid" id="iPaid" ${i.paid?'checked':''}><span>Pagamento ricevuto</span></label>`,
-    `<button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button><button class="btn primary">Salva</button>`,
+    `<button type="button" class="btn" data-act="pdfOpen" data-id="${i.id}">Apri PDF</button><button type="button" class="btn" data-act="pdfDown" data-id="${i.id}">Scarica PDF</button><button type="button" class="btn" data-act="pdfMail" data-id="${i.id}">Invia per email</button><button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button><button class="btn primary">Salva</button>`,
     f=>{i.paid=!!f.paid;toast(i.paid?'Fattura segnata come pagata':'Fattura aggiornata')});
 }
 function studioForm(s){
@@ -1144,6 +1212,12 @@ document.addEventListener('click',e=>{
     case 'hideRecover':$('#recoverForm').hidden=true;$('#loginForm').hidden=false;break;
     case 'newRec':newRecoveryForm();break;
     case 'bkDown':backupDownloadForm();break;
+    case 'about':aboutModal(false);break;
+    case 'logoPick':$('#logoUp').click();break;
+    case 'logoReset':removeLogo();break;
+    case 'pdfOpen':invoicePdf(id,'open');break;
+    case 'pdfDown':invoicePdf(id,'down');break;
+    case 'pdfMail':invoicePdf(id,'email');break;
     case 'bkRestore':backupRestoreForm();break;
     case 'copyRec':{const t=$('#recCode').textContent;navigator.clipboard.writeText(t).then(()=>toast('Codice copiato')).catch(()=>{const r=document.createRange();r.selectNodeContents($('#recCode'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Selezionato: premi Cmd+C')});break}
     case 'docPick':docCat=el.dataset.cat||'';$('#docUp').click();break;
@@ -1153,6 +1227,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const el=e.target;
   if(el.id==='tPick'){const o=el.selectedOptions[0];$('#tNameWrap').hidden=el.value!=='__altro';$('#tHint').textContent=o&&o.dataset.hint?o.dataset.hint:'';if(el.value==='__altro')$('#tName').focus();return}
+  if(el.id==='logoUp'){if(el.files[0])uploadLogo(el.files[0]);el.value='';return}
   if(el.id==='docUp'){if(el.files.length)uploadDocs(el.files);el.value='';return}
   if(el.id==='sedeSel'){S.studio=el.value;S.filter=null;render();return}
   if(!DB)return;
@@ -1186,6 +1261,7 @@ document.addEventListener('submit',e=>{
     if(!d.snome.trim())return fail('Dai un nome al tuo primo studio.');
     const un=d.username.trim().toLowerCase();if(!/^[a-z0-9._-]{3,}$/.test(un))return fail('Nome utente: almeno 3 caratteri, solo lettere, numeri e . _ -');
     if(!d.code.trim())return fail('Inserisci il codice di installazione.');
+    if(!d.lic)return fail('Per continuare devi accettare le condizioni di licenza d’uso.');
     if(d.pw1.length<10)return fail('La password deve avere almeno 10 caratteri.');
     if(d.pw1!==d.pw2)return fail('Le due password non coincidono.');
     const pr=PROF[d.professione];
@@ -1194,7 +1270,7 @@ document.addEventListener('submit',e=>{
     let data;
     if(d.sample){data=seed();data.me=Object.assign(data.me,me)}else data=emptyDB(me,st);
     const btn=$('#suBtn');btn.disabled=true;
-    (async()=>{try{const r=await api('/api/setup',{method:'POST',body:{code:d.code.trim(),username:un,password:d.pw1,data}});await loadData();f.reset();enterApp();
+    (async()=>{try{const r=await api('/api/setup',{method:'POST',body:{code:d.code.trim(),username:un,password:d.pw1,data,acceptLicense:true}});await loadData();f.reset();enterApp();
         if(!d.sample){S.view='studi';render()}
         showRecoveryCode(r.recoveryCode,'Il tuo gestionale è pronto. Ecco il <b>codice di recupero</b>: se dimentichi la password, ti permette di sceglierne una nuova.')}
       catch(e){fail(e.status?e.message:'Server non raggiungibile.')}finally{btn.disabled=false}})();return}
@@ -1213,7 +1289,7 @@ $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')close()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)close()});
 MQ.addEventListener('change',()=>{if(S.view==='agenda')render()});
 (async()=>{
-  try{const s=await api('/api/status');
+  try{const s=await api('/api/status');APP_V=s.version||'';LIC={accepted:!!s.licenseAccepted,ts:s.licenseAcceptedAt,v:s.licenseVersion};applyLogo(s.logo);
     if(!s.configured){showSetup();if(!s.setupEnabled){const e=$('#suErr');e.textContent='Sul server manca il codice di installazione: controlla il file di configurazione.';e.hidden=false}return}
     if(s.logged){await loadData();enterApp()}else showLogin()}
   catch(e){showLogin('Server non raggiungibile. Riprova tra poco.')}

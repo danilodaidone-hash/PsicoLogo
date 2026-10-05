@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
+const zlib = require('node:zlib');
 
 /* ---------------- configurazione ---------------- */
 const PORT = Number(process.env.PORT || 3000);
@@ -53,6 +54,7 @@ db.exec(`
 if (!db.prepare('PRAGMA table_info(files)').all().some(c => c.name === 'category')) {
   db.exec("ALTER TABLE files ADD COLUMN category TEXT NOT NULL DEFAULT ''");
 }
+db.exec('CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)');
 if (!db.prepare('PRAGMA table_info(account)').all().some(c => c.name === 'recovery_hash')) {
   db.exec('ALTER TABLE account ADD COLUMN recovery_hash TEXT');
 }
@@ -79,6 +81,11 @@ const q = {
   listFiles: db.prepare('SELECT id, category, name, mime, size, created FROM files WHERE patient_id = ? ORDER BY created DESC'),
   file: db.prepare('SELECT * FROM files WHERE id = ?'),
   delFile: db.prepare('DELETE FROM files WHERE id = ?'),
+  allFiles: db.prepare('SELECT * FROM files'),
+  delAllFiles: db.prepare('DELETE FROM files'),
+  insFileFull: db.prepare('INSERT INTO files (id, patient_id, category, name, mime, size, created, enc) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+  getMeta: db.prepare('SELECT value FROM meta WHERE key = ?'),
+  setMeta: db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
 };
 const log = (event, ip, detail = '') => q.audit.run(Date.now(), event, ip || '', String(detail).slice(0, 200));
 
@@ -146,6 +153,31 @@ function newRecoveryCode() {
   const raw = Array.from(b, x => REC_ALPHA[x % REC_ALPHA.length]).join('');
   q.setRecovery.run(hashPassword(raw));
   return raw.match(/.{4}/g).join('-');
+}
+// ---- Backup completo da scaricare: dati + documenti, cifrato con una password scelta da chi lo scarica.
+// Formato: 'PLBK1' + sale(16) + iv(12) + tag(16) + AES-256-GCM( gzip( JSON ) )
+const BK_MAGIC = Buffer.from('PLBK1');
+const MAX_BACKUP = 300 * 1024 * 1024;
+const backupKey = (pass, salt) => crypto.scryptSync(pass, salt, 32, { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
+function buildBackup(pass) {
+  const d = q.doc.get();
+  const payload = { app: 'PsicoLogo', format: 1, created: new Date().toISOString(), version: d.version, data: decrypt(d.enc),
+    files: q.allFiles.all().map(f => ({ id: f.id, patient_id: f.patient_id, category: f.category, name: f.name, mime: f.mime, size: f.size, created: f.created, content: decryptBuf(f.enc).toString('base64') })) };
+  const gz = zlib.gzipSync(Buffer.from(JSON.stringify(payload)));
+  const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', backupKey(pass, salt), iv);
+  const body = Buffer.concat([c.update(gz), c.final()]);
+  return { buf: Buffer.concat([BK_MAGIC, salt, iv, c.getAuthTag(), body]), files: payload.files.length };
+}
+function readBackup(buf, pass) {
+  if (buf.length < 50 || !buf.subarray(0, 5).equals(BK_MAGIC)) throw Object.assign(new Error('Questo file non è un backup di PsicoLogo.'), { status: 400 });
+  const salt = buf.subarray(5, 21), iv = buf.subarray(21, 33), tag = buf.subarray(33, 49);
+  let gz;
+  try { const d = crypto.createDecipheriv('aes-256-gcm', backupKey(pass, salt), iv); d.setAuthTag(tag); gz = Buffer.concat([d.update(buf.subarray(49)), d.final()]); }
+  catch { throw Object.assign(new Error('Password del backup errata, oppure file danneggiato.'), { status: 400 }); }
+  const p = JSON.parse(zlib.gunzipSync(gz).toString('utf8'));
+  if (p.app !== 'PsicoLogo' || !p.data || typeof p.data !== 'object' || !Array.isArray(p.files)) throw Object.assign(new Error('Il contenuto del backup non è valido.'), { status: 400 });
+  return p;
 }
 const normRecovery = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
@@ -283,7 +315,8 @@ async function api(req, res, url) {
   if (url === '/api/data' && method === 'GET') {
     const d = q.doc.get();
     const acc = q.account.get();
-    return send(res, 200, { version: d.version, data: decrypt(d.enc), username: acc.username, hasRecovery: !!acc.recovery_hash });
+    const lb = q.getMeta.get('last_backup');
+    return send(res, 200, { version: d.version, data: decrypt(d.enc), username: acc.username, hasRecovery: !!acc.recovery_hash, lastBackup: lb ? Number(lb.value) : null });
   }
   if (url === '/api/data' && method === 'PUT') {
     const b = await readJson(req);
@@ -310,6 +343,38 @@ async function api(req, res, url) {
     const recoveryCode = newRecoveryCode();
     log('recupero_codice_creato', ip);
     return send(res, 200, { ok: true, recoveryCode });
+  }
+  if (url === '/api/backup/download' && method === 'POST') {
+    const b = await readJson(req);
+    if (!validPw(b.password)) return send(res, 400, { error: 'La password del backup deve avere almeno 10 caratteri.' });
+    const { buf, files } = buildBackup(b.password);
+    const now = Date.now();
+    q.setMeta.run('last_backup', String(now));
+    log('backup_scaricato', ip, `${files} documenti, ${Math.round(buf.length / 1024)} KB`);
+    return send(res, 200, buf, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="psicologo-backup-${new Date(now).toISOString().slice(0, 10)}.plbk"`, 'X-Last-Backup': String(now) });
+  }
+  if (url === '/api/backup/restore' && method === 'POST') {
+    let pass = '', accPw = '';
+    try { pass = decodeURIComponent(String(req.headers['x-backup-password'] || '')); accPw = decodeURIComponent(String(req.headers['x-account-password'] || '')); } catch {}
+    if (!verifyPassword(accPw, q.account.get().pw_hash)) { log('ripristino_rifiutato', ip, 'password account errata'); return send(res, 400, { error: 'La password del tuo account non è corretta.' }); }
+    const buf = await readRaw(req, MAX_BACKUP);
+    const p = readBackup(buf, pass);
+    // copia di sicurezza dello stato attuale, prima di sostituirlo
+    const safety = path.join(DATA_DIR, 'backups', `prima-del-ripristino-${new Date().toISOString().replace(/[:.]/g, '-')}.db`);
+    db.exec(`VACUUM INTO '${safety.replace(/'/g, "''")}'`);
+    const d = q.doc.get();
+    db.exec('BEGIN');
+    try {
+      q.upsertDoc.run(d.version + 1, encrypt(p.data), Date.now());
+      q.delAllFiles.run();
+      for (const f of p.files) {
+        const content = Buffer.from(String(f.content || ''), 'base64');
+        q.insFileFull.run(String(f.id), String(f.patient_id), FILE_CATEGORIES.has(f.category) ? f.category : '', String(f.name).slice(0, 150), String(f.mime), content.length, Number(f.created) || Date.now(), encryptBuf(content));
+      }
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    log('backup_ripristinato', ip, `backup del ${String(p.created).slice(0, 10)}, ${p.files.length} documenti`);
+    return send(res, 200, { ok: true, created: p.created, files: p.files.length });
   }
   if (url === '/api/log' && method === 'GET') {
     return send(res, 200, { events: q.auditList.all() });

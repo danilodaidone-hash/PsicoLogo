@@ -1,0 +1,67 @@
+PsicoLogo – Condizioni di licenza d'uso
+Versione 1.0 – BOZZA da far rivedere a un legale prima dell'uso con clienti
+
+Copyright © 2026 Danilo Daidone. Tutti i diritti riservati.
+
+1. Titolare
+Il software PsicoLogo, comprese le sue versioni successive, la documentazione e
+l'interfaccia grafica, è di proprietà di Danilo Daidone (il "Licenziante").
+
+2. Oggetto della licenza
+Il Licenziante concede al professionista che lo installa o lo utilizza (il
+"Licenziatario") una licenza d'uso non esclusiva, non trasferibile e revocabile,
+per una singola installazione, limitata all'esercizio della propria attività
+professionale.
+
+3. Divieti
+Salvo autorizzazione scritta del Licenziante, è vietato copiare, modificare,
+decompilare, distribuire, concedere in sublicenza, vendere, noleggiare o
+rendere disponibile a terzi il software, in tutto o in parte.
+
+4. Dati personali
+Il Licenziatario è titolare del trattamento dei dati dei propri pazienti ai
+sensi del Regolamento (UE) 2016/679. Se il Licenziante gestisce il server su
+cui il software è installato, agisce come responsabile del trattamento ai
+sensi dell'art. 28 del Regolamento, sulla base di un apposito accordo scritto.
+
+5. Obblighi del Licenziatario
+Il Licenziatario custodisce le proprie credenziali, il codice di recupero e
+le copie di backup; raccoglie i consensi dei pazienti; verifica la correttezza
+di fatture, documenti e dati prodotti con il software.
+
+6. Adempimenti fiscali
+Il software è uno strumento di supporto. Il contenuto fiscale delle fatture e
+gli adempimenti verso il Sistema Tessera Sanitaria restano responsabilità del
+Licenziatario, che li verifica con il proprio consulente.
+
+7. Garanzia
+Il software è fornito "nello stato in cui si trova". Nei limiti consentiti
+dalla legge, non è garantita l'assenza di errori né l'idoneità a uno scopo
+specifico.
+
+8. Limitazione di responsabilità
+Salvo i casi di dolo o colpa grave, il Licenziante non risponde di danni
+indiretti, perdita di dati o mancato guadagno. Si raccomanda di eseguire
+backup regolari con la funzione prevista nell'applicazione.
+
+9. Aggiornamenti e assistenza
+Aggiornamenti e assistenza sono regolati da accordi separati.
+
+10. Durata e cessazione
+La licenza dura fino al recesso di una delle parti e cessa automaticamente in
+caso di violazione di queste condizioni. Alla cessazione il Licenziatario può
+esportare i propri dati con la funzione di backup.
+
+11. Componenti di terze parti
+Il software utilizza componenti di terze parti soggetti alle rispettive
+licenze, che prevalgono su queste condizioni per quanto li riguarda:
+- Node.js – licenza MIT
+- Caddy – licenza Apache 2.0
+- Docker Engine – licenza Apache 2.0
+- Caratteri Bricolage Grotesque, Atkinson Hyperlegible, JetBrains Mono –
+  SIL Open Font License 1.1
+
+12. Legge applicabile e foro
+Le presenti condizioni sono regolate dalla legge italiana. Per ogni
+controversia è competente il foro di Roma, salvo i casi in cui la legge
+preveda un foro diverso.

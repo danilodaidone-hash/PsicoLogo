@@ -14,7 +14,7 @@ set -uo pipefail
 REPO="danilodaidone-hash/PsicoLogo"
 BRANCH="main"
 SERVER="ubuntu@84.8.219.106"
-SSH_KEY="$HOME/Downloads/ssh-key-2026-09-30.key"
+SSH_KEY="$HOME/Desktop/PsicoLogo/ssh-key-2026-09-30.key"
 # File del progetto da tenere allineati su GitHub
 FILES=(
   "server.js"

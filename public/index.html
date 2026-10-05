@@ -279,6 +279,17 @@ td.neg{color:var(--bad)}
       <label class="fl" for="lgPw">Password<span class="pw"><input id="lgPw" name="p" type="password" autocomplete="current-password" required><button type="button" data-act="showPw" aria-controls="lgPw">Mostra</button></span></label>
       <p id="lgErr" class="err" role="alert" hidden></p>
       <button class="btn primary">Accedi</button>
+      <button type="button" class="linkbtn small" data-act="showRecover" style="align-self:center">Password dimenticata?</button>
+    </form>
+    <form id="recoverForm" novalidate hidden>
+      <p class="muted small" style="margin:0">Usa il <b>codice di recupero</b> che hai salvato alla prima configurazione o dal Profilo. Dopo il cambio ne riceverai uno nuovo: quello usato non varrà più.</p>
+      <label class="fl" for="rcUser">Nome utente<input id="rcUser" name="u" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+      <label class="fl" for="rcCode">Codice di recupero<input id="rcCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX" class="mono"></label>
+      <label class="fl" for="rcPw1">Nuova password<input id="rcPw1" name="p1" type="password" autocomplete="new-password"></label>
+      <label class="fl" for="rcPw2">Ripeti la nuova password<input id="rcPw2" name="p2" type="password" autocomplete="new-password"></label>
+      <p id="rcErr" class="err" role="alert" hidden></p>
+      <button class="btn primary">Reimposta la password</button>
+      <button type="button" class="linkbtn small" data-act="hideRecover" style="align-self:center">Torna all’accesso</button>
     </form>
         <p class="muted small" style="margin:0">Connessione cifrata. Dopo 5 tentativi sbagliati l’accesso si blocca per 15 minuti.</p>
   </div>
@@ -458,7 +469,7 @@ function makeInvoice(db,pat,list,date){
 }
 
 /* ---------- stato ---------- */
-let DB=null,VER=0,USERNAME='';
+let DB=null,VER=0,USERNAME='',HAS_REC=false;
 /* ---------- comunicazione con il server ---------- */
 async function api(url,opts={}){
   const r=await fetch(url,{method:opts.method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json','X-PsicoLogo':'1'},body:opts.body?JSON.stringify(opts.body):undefined});
@@ -466,7 +477,7 @@ async function api(url,opts={}){
   if(!r.ok){const e=new Error(j.error||`Errore ${r.status}`);e.status=r.status;e.body=j;throw e}
   return j;
 }
-async function loadData(){const r=await api('/api/data');DB=r.data;VER=r.version;USERNAME=r.username}
+async function loadData(){const r=await api('/api/data');DB=r.data;VER=r.version;USERNAME=r.username;HAS_REC=!!r.hasRecovery}
 const setSync=(t,cls='')=>{const el=$('#sync');if(el){el.textContent=t;el.className='sync '+cls}};
 let dirty=false,saving=false,saveTimer=null;
 function save(){dirty=true;setSync('Salvataggio…','busy');clearTimeout(saveTimer);saveTimer=setTimeout(flush,500)}
@@ -510,7 +521,7 @@ function studioAt(date,time){const m=toMin(time);return studiDelGiorno(date).fin
 /* ---------- accesso ---------- */
 function screen(name){$('#login').hidden=name!=='login';$('#setup').hidden=name!=='setup';$('.app').hidden=name!=='app'}
 function enterApp(){S.logged=true;S.view='oggi';S.pid=null;S.q='';S.studio='tutti';S.filter=null;screen('app');setSync('Salvato');render();window.scrollTo(0,0)}
-function showLogin(msg){S.logged=false;DB=null;dirty=false;close();screen('login');
+function showLogin(msg){S.logged=false;DB=null;dirty=false;close();screen('login');$('#recoverForm').hidden=true;$('#loginForm').hidden=false;
   $('#lgPw').value='';const err=$('#lgErr');err.textContent=msg||'';err.hidden=!msg;$('#lgUser').focus();}
 function showSetup(){close();screen('setup');$('#suErr').hidden=true;window.scrollTo(0,0)}
 
@@ -564,7 +575,8 @@ function vToday(){
         ${noNote.map(a=>`<li><span class="chip">Nota</span><div class="grow"><a href="#" data-act="note" data-id="${a.id}">${esc(full(pat(a.patientId)))}</a><div class="muted" style="font-size:.82rem">Diario mancante per la seduta del ${fmtD(a.date)}</div></div></li>`).join('')}
         ${ub.length?`<li><span class="chip">Fatture</span><div class="grow"><a href="#" data-act="go" data-v="fatture">${ub.length} ${ub.length>1?'prestazioni':'prestazione'} da fatturare</a></div></li>`:''}
         ${unpaid.slice(0,4).map(i=>`<li><span class="chip bad">Incasso</span><div class="grow"><a href="#" data-act="inv" data-id="${i.id}">Fattura ${i.num} · ${esc(full(pat(i.patientId)))}</a><div class="muted" style="font-size:.82rem">${euro(i.tot)} dal ${fmtD(i.date)}</div></div></li>`).join('')}
-        ${!noCons.length&&!noNote.length&&!ub.length&&!unpaid.length?'<li class="muted">Tutto in ordine.</li>':''}
+        ${HAS_REC?'':'<li><span class="chip bad">Sicurezza</span><div class="grow"><a href="#" data-act="go" data-v="profilo">Crea il codice di recupero della password</a><div class="muted" style="font-size:.82rem">Ti serve se dimentichi la password</div></div></li>'}
+        ${HAS_REC&&!noCons.length&&!noNote.length&&!ub.length&&!unpaid.length?'<li class="muted">Tutto in ordine.</li>':''}
       </ul>
     </section>
   </div>`;
@@ -767,11 +779,14 @@ function vProfile(){
     <label class="fl" for="pwN2">Ripeti la nuova password<input type="password" id="pwN2" name="n2" autocomplete="new-password" required></label>
     <p class="muted small" style="margin:0">Almeno 10 caratteri. Cambiandola, gli altri dispositivi collegati vengono disconnessi.</p>
     <div><button class="btn primary">Aggiorna password</button></div></form></section></div>
+  <section class="panel"><header><h2>Codice di recupero</h2>${HAS_REC?'<span class="chip good">Attivo</span>':'<span class="chip bad">Non creato</span>'}</header><div class="body row" style="justify-content:space-between;align-items:center">
+    <p class="muted" style="margin:0;max-width:62ch">${HAS_REC?'Serve se dimentichi la password. Se l’hai perso o pensi che qualcuno l’abbia visto, generane uno nuovo: il precedente smette di funzionare.':'Non hai ancora un codice di recupero: se dimentichi la password non potresti rientrare da solo. Crealo adesso e conservalo al sicuro.'}</p>
+    <button type="button" class="btn ${HAS_REC?'':'primary'}" data-act="newRec">${HAS_REC?'Genera un nuovo codice':'Crea il codice di recupero'}</button></div></section>
   <div class="two"><section class="panel"><header><h2>Ultimi accessi e operazioni</h2></header><div class="tbl-wrap" id="auditBox"><p class="empty">Caricamento…</p></div></section>
   <section class="panel"><header><h2>Copia dei tuoi dati</h2></header><div class="body"><p class="muted" style="margin:0 0 12px;max-width:60ch">Il server fa un backup automatico ogni giorno e conserva gli ultimi 14. Puoi anche scaricare una copia completa dei dati in formato JSON da tenere al sicuro. Il file non è cifrato: conservalo con cura. I documenti allegati alle cartelle sono inclusi nei backup del server, ma non in questa copia.</p><a class="btn" href="/api/export" download>Scarica una copia dei dati</a></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
@@ -804,6 +819,21 @@ async function uploadDocs(files){
 async function deleteDoc(id,btn){
   if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.textContent='Conferma eliminazione';setTimeout(()=>{if(btn.isConnected){btn.dataset.sure='';btn.textContent='Elimina'}},4000);return}
   try{await api('/api/files/'+id,{method:'DELETE'});toast('Documento eliminato');loadDocs()}catch(e){toast(e.message)}}
+
+/* ---------- codice di recupero ---------- */
+function showRecoveryCode(code,intro){
+  modal('Il tuo codice di recupero',`<p style="margin:0">${intro||'Se dimentichi la password, con questo codice puoi sceglierne una nuova dalla schermata di accesso.'}</p>
+    <div style="font-family:var(--f-mono);font-size:1.5rem;letter-spacing:.06em;text-align:center;padding:16px;border:2px dashed var(--accent);border-radius:var(--r);user-select:all" id="recCode">${esc(code)}</div>
+    <div class="row" style="justify-content:center"><button type="button" class="btn small" data-act="copyRec">Copia</button></div>
+    <p class="callout" style="margin:0"><b>Salvalo adesso</b>: non verrà più mostrato. Stampalo o mettilo nel gestore di password, separato dalla password. Ogni nuovo codice annulla il precedente.</p>`,
+    `<button class="btn primary">L’ho salvato</button>`,()=>{HAS_REC=true});
+}
+function newRecoveryForm(){
+  modal('Nuovo codice di recupero',`<p style="margin:0">Per sicurezza conferma la tua password. Il codice precedente smetterà di funzionare.</p>
+    <label class="fl" for="nrPw">Password attuale<input type="password" id="nrPw" name="pw" autocomplete="current-password"></label>`,
+    `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Genera il codice</button>`,
+    f=>{(async()=>{try{const r=await api('/api/recovery/new',{method:'POST',body:{password:f.pw}});HAS_REC=true;showRecoveryCode(r.recoveryCode,'Ecco il nuovo codice di recupero. Quello precedente non vale più.')}catch(e){toast(e.message)}})();return false});
+}
 
 /* ---------- modali ---------- */
 let onSubmit=null;
@@ -1068,6 +1098,10 @@ document.addEventListener('click',e=>{
     case 'archStudio':archiveStudio(id);break;
     case 'reactStudio':studio(id).attivo=true;S.filter=null;save();render();toast(`${studio(id).nome} riattivato`);break;
     case 'editMe':meForm();break;
+    case 'showRecover':$('#loginForm').hidden=true;$('#recoverForm').hidden=false;$('#rcUser').value=$('#lgUser').value;$('#rcErr').hidden=true;$('#rcCode').focus();break;
+    case 'hideRecover':$('#recoverForm').hidden=true;$('#loginForm').hidden=false;break;
+    case 'newRec':newRecoveryForm();break;
+    case 'copyRec':{const t=$('#recCode').textContent;navigator.clipboard.writeText(t).then(()=>toast('Codice copiato')).catch(()=>{const r=document.createRange();r.selectNodeContents($('#recCode'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Selezionato: premi Cmd+C')});break}
     case 'docPick':docCat=el.dataset.cat||'';$('#docUp').click();break;
     case 'docDel':deleteDoc(id,el);break;
   }
@@ -1092,6 +1126,15 @@ document.addEventListener('submit',e=>{
     (async()=>{try{await api('/api/login',{method:'POST',body:{username:n,password:pw}});await loadData();enterApp();toast(`Bentornata/o, ${DB.me.nome}`)}
       catch(e){err.textContent=e.status?e.message:'Server non raggiungibile. Controlla la connessione.';err.hidden=false;$('#lgPw').select()}
       finally{btn.disabled=false}})();return}
+  if(f.id==='recoverForm'){const err=$('#rcErr'),bad=m=>{err.textContent=m;err.hidden=false};
+    const u=$('#rcUser').value.trim().toLowerCase(),code=$('#rcCode').value,p1=$('#rcPw1').value,p2=$('#rcPw2').value;
+    if(!u||!code.trim())return bad('Inserisci nome utente e codice di recupero.');
+    if(p1.length<10)return bad('La nuova password deve avere almeno 10 caratteri.');
+    if(p1!==p2)return bad('Le due password non coincidono.');
+    const btn=f.querySelector('.primary');btn.disabled=true;
+    (async()=>{try{const r=await api('/api/recovery/use',{method:'POST',body:{username:u,code,password:p1}});f.reset();$('#recoverForm').hidden=true;$('#loginForm').hidden=false;await loadData();enterApp();
+        showRecoveryCode(r.recoveryCode,'Password cambiata e accesso effettuato. Il codice che hai usato non vale più: ecco quello <b>nuovo</b>.')}
+      catch(e){bad(e.status?e.message:'Server non raggiungibile.')}finally{btn.disabled=false}})();return}
   if(f.id==='setupForm'){const d=Object.fromEntries(new FormData(f)),err=$('#suErr');
     const fail=m=>{err.textContent=m;err.hidden=false};
     if(!d.nome.trim()||!d.cognome.trim())return fail('Inserisci nome e cognome.');
@@ -1107,8 +1150,9 @@ document.addEventListener('submit',e=>{
     let data;
     if(d.sample){data=seed();data.me=Object.assign(data.me,me)}else data=emptyDB(me,st);
     const btn=$('#suBtn');btn.disabled=true;
-    (async()=>{try{await api('/api/setup',{method:'POST',body:{code:d.code.trim(),username:un,password:d.pw1,data}});await loadData();f.reset();enterApp();toast('Il tuo gestionale è pronto');
-        if(!d.sample)setTimeout(()=>{S.view='studi';render();studioForm(DB.studi[0])},400)}
+    (async()=>{try{const r=await api('/api/setup',{method:'POST',body:{code:d.code.trim(),username:un,password:d.pw1,data}});await loadData();f.reset();enterApp();
+        if(!d.sample){S.view='studi';render()}
+        showRecoveryCode(r.recoveryCode,'Il tuo gestionale è pronto. Ecco il <b>codice di recupero</b>: se dimentichi la password, ti permette di sceglierne una nuova.')}
       catch(e){fail(e.status?e.message:'Server non raggiungibile.')}finally{btn.disabled=false}})();return}
   if(f.dataset.form==='pw'){const d=Object.fromEntries(new FormData(f));
     if(d.n1.length<10){toast('La nuova password deve avere almeno 10 caratteri');return}

@@ -125,3 +125,4 @@ Limiti di questa versione di prova:
 - Aggiornamento: `sudo bash /opt/psicologo/update.sh` dopo aver caricato la nuova versione su GitHub.
 - Dati: `/opt/psicologo/data` (database e backup). Configurazione e chiave: `/opt/psicologo/.env` (permessi 600).
 - Dominio personalizzato: `DOMAIN=studio.esempio.it` prima di `install.sh`, con il record DNS A che punta all'IP del server.
+- Server dimostrativo: con `DEMO_MODE=1` in `.env` compare nel Profilo il pulsante **Azzera demo**, che riporta l'app alla prima configurazione (non resta nessuna copia: vengono cancellati anche i backup in `data/backups`, che in questa modalità non vengono creati). Attivazione: `echo DEMO_MODE=1 | sudo tee -a /opt/psicologo/.env && cd /opt/psicologo && sudo docker compose up -d`. **Mai** su un server con dati reali.

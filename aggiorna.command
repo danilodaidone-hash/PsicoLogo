@@ -18,6 +18,8 @@ SSH_KEY="$HOME/Downloads/ssh-key-2026-09-30.key"
 # File del progetto da tenere allineati su GitHub
 FILES=(
   "server.js"
+  "pdf.js"
+  "LICENSE"
   "public/index.html"
   "scripts/fetch-fonts.js"
   "scripts/reset-password.js"

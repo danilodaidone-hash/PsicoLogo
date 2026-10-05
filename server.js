@@ -53,10 +53,15 @@ db.exec(`
 if (!db.prepare('PRAGMA table_info(files)').all().some(c => c.name === 'category')) {
   db.exec("ALTER TABLE files ADD COLUMN category TEXT NOT NULL DEFAULT ''");
 }
+if (!db.prepare('PRAGMA table_info(account)').all().some(c => c.name === 'recovery_hash')) {
+  db.exec('ALTER TABLE account ADD COLUMN recovery_hash TEXT');
+}
 const q = {
   account: db.prepare('SELECT * FROM account WHERE id = 1'),
   insAccount: db.prepare('INSERT INTO account (id, username, pw_hash, created) VALUES (1, ?, ?, ?)'),
   setPw: db.prepare('UPDATE account SET pw_hash = ? WHERE id = 1'),
+  setRecovery: db.prepare('UPDATE account SET recovery_hash = ? WHERE id = 1'),
+  delAllSessions: db.prepare('DELETE FROM sessions'),
   doc: db.prepare('SELECT * FROM doc WHERE id = 1'),
   upsertDoc: db.prepare('INSERT INTO doc (id, version, enc, updated) VALUES (1, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET version = excluded.version, enc = excluded.enc, updated = excluded.updated'),
   insSession: db.prepare('INSERT INTO sessions (hash, created, last_seen, ip, ua) VALUES (?, ?, ?, ?, ?)'),
@@ -134,6 +139,15 @@ function decrypt(b64) {
   d.setAuthTag(buf.subarray(12, 28));
   return JSON.parse(Buffer.concat([d.update(buf.subarray(28)), d.final()]).toString('utf8'));
 }
+// Codice di recupero: 16 caratteri (circa 80 bit), senza lettere ambigue (0/O, 1/I/L)
+const REC_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function newRecoveryCode() {
+  const b = crypto.randomBytes(16);
+  const raw = Array.from(b, x => REC_ALPHA[x % REC_ALPHA.length]).join('');
+  q.setRecovery.run(hashPassword(raw));
+  return raw.match(/.{4}/g).join('-');
+}
+const normRecovery = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 
@@ -221,7 +235,7 @@ async function api(req, res, url) {
     q.upsertDoc.run(1, encrypt(b.data), Date.now());
     log('configurazione', ip, u);
     newSession(req, res);
-    return send(res, 200, { ok: true, version: 1 });
+    return send(res, 200, { ok: true, version: 1, recoveryCode: newRecoveryCode() });
   }
 
   if (url === '/api/login' && method === 'POST') {
@@ -239,6 +253,25 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true });
   }
 
+  if (url === '/api/recovery/use' && method === 'POST') {
+    const b = await readJson(req);
+    const u = String(b.username || '').trim().toLowerCase();
+    const lk = Math.max(isLocked('rec:' + u), isLocked('ip:' + ip));
+    if (lk) { log('recupero_bloccato', ip, u); return send(res, 429, { error: `Troppi tentativi. Riprova dopo le ${new Date(lk).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' })}.` }); }
+    const acc = q.account.get();
+    const code = normRecovery(b.code);
+    const ok = acc && acc.username === u && acc.recovery_hash && code.length === 16 && verifyPassword(code, acc.recovery_hash);
+    if (!ok) { fail('rec:' + u); fail('ip:' + ip); log('recupero_fallito', ip, u); return send(res, 401, { error: 'Nome utente o codice di recupero non corretti.' }); }
+    if (!validPw(b.password)) return send(res, 400, { error: 'La nuova password deve avere almeno 10 caratteri.' });
+    q.setPw.run(hashPassword(b.password));
+    q.delAllSessions.run();
+    q.delLock.run('rec:' + u); q.delLock.run('u:' + u); q.delLock.run('ip:' + ip);
+    const recoveryCode = newRecoveryCode(); // il codice usato non vale più
+    log('password_recuperata', ip, u);
+    newSession(req, res);
+    return send(res, 200, { ok: true, recoveryCode });
+  }
+
   const s = currentSession(req);
   if (!s) return send(res, 401, { error: 'Sessione scaduta: accedi di nuovo.' });
 
@@ -249,7 +282,8 @@ async function api(req, res, url) {
   }
   if (url === '/api/data' && method === 'GET') {
     const d = q.doc.get();
-    return send(res, 200, { version: d.version, data: decrypt(d.enc), username: q.account.get().username });
+    const acc = q.account.get();
+    return send(res, 200, { version: d.version, data: decrypt(d.enc), username: acc.username, hasRecovery: !!acc.recovery_hash });
   }
   if (url === '/api/data' && method === 'PUT') {
     const b = await readJson(req);
@@ -269,6 +303,13 @@ async function api(req, res, url) {
     q.delOtherSessions.run(s.hash);
     log('cambio_password', ip);
     return send(res, 200, { ok: true });
+  }
+  if (url === '/api/recovery/new' && method === 'POST') {
+    const b = await readJson(req);
+    if (!verifyPassword(String(b.password || ''), q.account.get().pw_hash)) { log('recupero_nuovo_fallito', ip); return send(res, 400, { error: 'La password non è corretta.' }); }
+    const recoveryCode = newRecoveryCode();
+    log('recupero_codice_creato', ip);
+    return send(res, 200, { ok: true, recoveryCode });
   }
   if (url === '/api/log' && method === 'GET') {
     return send(res, 200, { events: q.auditList.all() });

@@ -408,7 +408,7 @@ a:hover{text-decoration-thickness:2px}
         <label>Password<input type="password" name="pw1" id="su-pw1" autocomplete="new-password" required placeholder="Almeno 10 caratteri"></label>
         <label>Ripeti password<input type="password" name="pw2" id="su-pw2" autocomplete="new-password" required></label>
       </fieldset>
-      <label class="check" style="border:0;padding:0"><input type="checkbox" name="sample" id="su-sample" checked><span><b>Inserisci pazienti e appuntamenti di esempio</b><br><span class="muted small">Utile per provare. Tre studi e dieci pazienti di fantasia, che potrai cancellare.</span></span></label>
+      <label class="check" style="border:0;padding:0"><input type="checkbox" name="sample" id="su-sample"><span><b>Inserisci dati di esempio</b><br><span class="muted small" id="su-sample-t">Per una dimostrazione: tre studi (il primo con il nome che hai scelto), dieci pazienti di fantasia con agenda, diario, valutazioni e fatture. Non usarlo per il lavoro reale.</span></span></label>
       <label class="check" style="border:0;padding:0"><input type="checkbox" name="lic" id="su-lic"><span>Ho letto e accetto le <button type="button" class="linkbtn" data-act="about">condizioni di licenza d’uso</button></span></label>
       <p id="suErr" class="err" role="alert" hidden></p>
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="suBtn">Crea il mio gestionale</button></div>
@@ -474,9 +474,10 @@ const COLORI=['--c1','--c2','--c3','--c4','--c5','--c6'];
 const COSTI={nessuno:'Nessun costo',mese:'Affitto mensile fisso',ora:'Stanza a ore',percentuale:'Percentuale sul compenso'};
 
 /* ---------- dati demo ---------- */
-function seed(){
+function seed(prof,st){const L=prof==='logopedia';
   let r=11;const rnd=()=>(r=(r*9301+49297)%233280)/233280;
-  const me={titolo:'Dott.ssa',nome:'Giulia',cognome:'Ferri',professione:'psicologia',qualifica:'Psicologa psicoterapeuta',albo:'Ordine degli Psicologi del Lazio n. 18342',piva:'14820390581',regime:'forfettario',
+  const me=L?{titolo:'Dott.ssa',nome:'Sara',cognome:'Ricci',professione:'logopedia',qualifica:'Logopedista',albo:'Ordine TSRM-PSTRP di Roma n. 4417',piva:'15230980583',regime:'forfettario',
+    cassa:4,cassaNome:'Contributo integrativo 4%',prest:'Trattamento logopedico',tariffa:45,tariffaVal:70}:{titolo:'Dott.ssa',nome:'Giulia',cognome:'Ferri',professione:'psicologia',qualifica:'Psicologa psicoterapeuta',albo:'Ordine degli Psicologi del Lazio n. 18342',piva:'14820390581',regime:'forfettario',
     cassa:2,cassaNome:'Contributo integrativo ENPAP 2%',prest:'Seduta di psicoterapia',tariffa:70,tariffaVal:90};
   const studi=[
     {id:'s1',nome:'Re di Roma',indirizzo:'Zona Re di Roma, Roma',nota:'Studio privato condiviso con una collega',costo:{tipo:'mese',valore:400},col:'--c1',orari:{0:['14:00','20:00'],2:['09:00','13:00'],3:['14:00','20:00']},attivo:true},
@@ -484,8 +485,21 @@ function seed(){
     {id:'s3',nome:'Valle Aurelia',indirizzo:'Zona Valle Aurelia, Roma',nota:'Stanza prenotata a ore',costo:{tipo:'ora',valore:12},col:'--c2',orari:{2:['15:00','20:00'],5:['09:00','13:00']},attivo:true},
   ];
   const P=(nome,cognome,nascita,cf,studioId,slots,extra)=>({id:uid(),nome,cognome,nascita,cf,studioId,slots,tel:'',email:'',tutori:[],invio:'',motivo:'',anamnesi:'',obiettivi:[],consensi:{informato:true,privacy:true,entrambi:true,ts:'ok'},...extra});
+  if(st&&st.nome){studi[0].nome=st.nome;if(st.indirizzo)studi[0].indirizzo=st.indirizzo}
   const y=TODAY.getFullYear();
-  const patients=[
+  const T2=(m,mt,mp)=>[{nome:m,rel:'Madre',tel:mt},{nome:mp,rel:'Padre',tel:''}];
+  const patients=L?[
+    P('Edoardo','Bianchi',`${y-5}-03-14`,'BNCDRD..C14H501X','s1',[[0,'16:00']],{tel:'347 220 1834',tutori:T2('Federica Bianchi','347 220 1834','Luca Bianchi'),invio:'Pediatra',motivo:'Disturbo fonologico: sostituzioni e omissioni di suoni.',anamnesi:'Ultimo anno di scuola dell’infanzia. Linguaggio poco intelligibile agli estranei. Udito nella norma.',obiettivi:[{t:'Produzione corretta di /r/ e /s/ in parola',d:false},{t:'Discriminazione uditiva delle coppie minime',d:true}]}),
+    P('Matilde','Ferraro',`${y-8}-10-02`,'FRRMLD..R42H501B','s1',[[2,'17:00']],{tel:'338 600 4471',tutori:T2('Ilaria Conti','338 600 4471','Paolo Ferraro'),invio:'Neuropsichiatria infantile',motivo:'Sospetta dislessia evolutiva: lettura lenta e scorretta.',anamnesi:'Terza primaria. Fatica nella lettura ad alta voce, evita i compiti scritti. Familiarità per DSA (padre).',obiettivi:[{t:'Migliorare la velocità di lettura di sillabe e parole',d:false}]}),
+    P('Gabriele','Rinaldi',`${y-3}-01-27`,'RNLGRL..A27H501Q','s2',[[1,'16:30']],{tel:'340 115 9902',tutori:T2('Chiara Rinaldi','340 115 9902','Marco Rinaldi'),invio:'Pediatra',motivo:'Ritardo nella comparsa del linguaggio: meno di 50 parole.',anamnesi:'Frequenta il nido. Buona comprensione, comunica soprattutto con gesti. Nessun problema uditivo.',obiettivi:[{t:'Ampliare il vocabolario espressivo',d:false},{t:'Indicazioni ai genitori per il gioco condiviso',d:true}]}),
+    P('Elena','Gallo',`${y-10}-05-19`,'GLLLNE..E59H501T','s2',[[4,'17:30']],{tel:'333 908 2265',tutori:T2('Barbara Gallo','333 908 2265','Andrea Gallo'),invio:'Scuola primaria',motivo:'Disortografia: errori fonologici e non fonologici frequenti.',anamnesi:'Quinta primaria. Diagnosi DSA a fine anno scorso, PDP attivo a scuola.',obiettivi:[{t:'Ridurre gli errori di doppie e accenti',d:false}],consensi:{informato:true,privacy:true,entrambi:false,ts:'ok'}}),
+    P('Franco','Moretti',`${y-68}-12-08`,'MRTFNC..T08H501L','s1',[[0,'18:00'],[3,'15:00']],{tel:'06 5512 7740',invio:'Neurologo',motivo:'Afasia non fluente dopo ictus.',anamnesi:'Ictus ischemico sinistro sei mesi fa. Comprensione discreta, produzione ridotta e faticosa. Accompagnato dalla moglie.',obiettivi:[{t:'Denominazione di oggetti d’uso quotidiano',d:false},{t:'Uso di frasi brevi in situazioni comunicative reali',d:false}]}),
+    P('Paola','Testa',`${y-44}-02-11`,'TSTPLA..B51H501C','s3',[[2,'18:30']],{tel:'329 447 0183',invio:'Otorinolaringoiatra',motivo:'Disfonia da sovraccarico vocale.',anamnesi:'Insegnante di scuola primaria. Raucedine a fine giornata, noduli cordali bilaterali alla laringoscopia.',obiettivi:[{t:'Igiene vocale e gestione della voce in classe',d:true},{t:'Coordinazione pneumo-fonica',d:false}]}),
+    P('Leonardo','Conti',`${y-7}-09-30`,'CNTLRD..P30H501Z','s3',[[5,'10:00']],{tel:'347 881 2054',tutori:T2('Valentina Conti','347 881 2054','Simone Conti'),invio:'Ortodontista',motivo:'Deglutizione atipica con spinta linguale.',anamnesi:'Seconda primaria. In trattamento ortodontico. Respirazione prevalentemente orale.',obiettivi:[{t:'Corretta postura linguale a riposo',d:false}]}),
+    P('Marco','Lombardi',`${y-35}-04-23`,'LMBMRC..D23H501K','s2',[[1,'19:00']],{tel:'331 760 4429',email:'m.lombardi@example.it',invio:'Accesso diretto',motivo:'Balbuzie con evitamento delle situazioni sociali.',anamnesi:'Commerciale. Balbuzie dall’infanzia, peggiora al telefono e nelle presentazioni.',obiettivi:[{t:'Tecniche di fluenza nella lettura e nel dialogo',d:false}],consensi:{informato:false,privacy:true,entrambi:true,ts:'ok'}}),
+    P('Aurora','Esposito',`${y-6}-07-04`,'SPSRRA..L44H501M','s3',[[2,'16:00']],{tel:'392 330 6618',tutori:T2('Giada Esposito','392 330 6618','Davide Esposito'),invio:'Neuropsichiatria infantile',motivo:'Disturbo del linguaggio espressivo: frasi brevi e morfologia povera.',anamnesi:'Prima primaria. Fatica a raccontare esperienze, buona comprensione.',obiettivi:[{t:'Costruzione di frasi complete con articoli e preposizioni',d:false}]}),
+    P('Giorgio','Fontana',`${y-74}-08-16`,'FNTGRG..M16H501S','s1',[[3,'17:00']],{tel:'06 3344 9021',invio:'Neurologo',motivo:'Disartria ipocinetica in malattia di Parkinson.',anamnesi:'Voce debole e monotona, eloquio accelerato. Seguito dal neurologo, terapia farmacologica stabile.',obiettivi:[{t:'Aumentare intensità e intelligibilità della voce',d:false}],consensi:{informato:true,privacy:true,entrambi:true,ts:'opposizione'}}),
+  ]:[
     P('Chiara','Martini',`${y-34}-11-02`,'MRTCHR..S42H501K','s1',[[0,'18:00']],{tel:'328 551 0942',email:'c.martini@example.it',invio:'Accesso diretto',motivo:'Ansia generalizzata con episodi di insonnia iniziale.',anamnesi:'Project manager. Preoccupazioni persistenti da circa un anno, aumentate dopo un cambio di ruolo. Nessun trattamento farmacologico.',obiettivi:[{t:'Riconoscere i pensieri di preoccupazione e il loro innesco',d:true},{t:'Ridurre l’evitamento nelle riunioni',d:false}]}),
     P('Riccardo','Marino',`${y-52}-07-30`,'MRNRCR..L30H501M','s1',[[0,'15:00']],{tel:'347 330 8120',invio:'Accesso diretto',motivo:'Stress lavoro-correlato, sintomi di esaurimento.',anamnesi:'Dirigente nella logistica. Irritabilità, stanchezza persistente, difficoltà a staccare dal lavoro.',obiettivi:[{t:'Definire confini tra lavoro e vita privata',d:false}],consensi:{informato:false,privacy:true,entrambi:true,ts:'ok'}}),
     P('Alessandro','De Luca',`${y-41}-09-15`,'DLCLSN..P15H501W','s1',[[3,'19:00']],{tel:'329 007 3321',invio:'Medico di medicina generale',motivo:'Disturbo dell’adattamento dopo un lutto.',anamnesi:'Perdita del padre a inizio anno. Ritiro sociale e calo di concentrazione al lavoro.',obiettivi:[{t:'Elaborazione del lutto',d:false}],consensi:{informato:true,privacy:true,entrambi:true,ts:'opposizione'}}),
@@ -499,18 +513,18 @@ function seed(){
   ];
   const appts=[],notes=[],tests=[],invoices=[];
   const W0=monday(TODAY);
-  const noteTxt=['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
+  const noteTxt=L?['Bambino collaborante. Esercizi di discriminazione e produzione in parola isolata: migliora la precisione. Consegnato materiale per casa ai genitori.','Lavoro sulla lettura di sillabe e parole bisillabe. Velocità in lieve miglioramento; persiste qualche inversione. Da rinforzare a casa.','Seduta centrata su denominazione e frasi brevi. Buona partecipazione, affaticamento nella seconda parte. Proseguire con supporti visivi.']:['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
   patients.forEach(p=>{
     for(let w=-5;w<=2;w++){
       p.slots.forEach(([d,t])=>{
         const date=iso(addDays(W0,w*7+d));
         let status='prenotato';
         if(date<T){const x=rnd();status=x<.07?'assente':x<.13?'disdetto':'svolto'}
-        const type=w===-5?'Primo colloquio':'Seduta';
-        appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date,start:t,dur:50,type,status,invoiceId:null});
+        const type=w===-5?(L?'Valutazione':'Primo colloquio'):'Seduta';
+        appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date,start:t,dur:L?45:50,type,status,invoiceId:null});
       });
     }
-    if(p.tutori.length){const d=p.slots[0][0];appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date:iso(addDays(W0,-14+d)),start:hhmm(toMin(p.slots[0][1])+60),dur:50,type:'Colloquio genitori',status:'svolto',invoiceId:null})}
+    if(p.tutori.length){const d=p.slots[0][0];appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date:iso(addDays(W0,-14+d)),start:hhmm(toMin(p.slots[0][1])+60),dur:L?45:50,type:'Colloquio genitori',status:'svolto',invoiceId:null})}
   });
   studi[0].link='https://meet.google.com/abc-defg-hij';
   appts.filter(a=>a.patientId===patients[3].id&&a.date>=iso(addDays(W0,-14))).forEach(a=>{a.online=true});patients[3].consensi.online=true;
@@ -531,10 +545,18 @@ function seed(){
   });
   const d0=iso(addDays(W0,-35));
   const tt=(i,name,result)=>tests.push({id:uid(),patientId:patients[i].id,date:d0,name,result});
+  if(L){
+  tt(0,'PFLI – Prove di valutazione fonologica','Processi fonologici di semplificazione persistenti oltre l’età attesa');
+  tt(1,'Prove MT di lettura','Rapidità: richiesta di intervento immediato · Correttezza: attenzione');tt(1,'DDE-2 – Batteria dislessia e disortografia','Lettura di non-parole sotto la norma');
+  tt(2,'PVB – Primo vocabolario del bambino','Vocabolario espressivo sotto il 10° percentile');
+  tt(4,'AAT – Aachener Aphasie Test','Afasia di Broca, gravità moderata');
+  tt(5,'VHI – Voice Handicap Index','Punteggio 38 – handicap moderato');tt(5,'Tempo massimo fonatorio','/a/ 9 secondi (ridotto)');
+  tt(8,'TVL – Test di valutazione del linguaggio','Produzione di frasi sotto la norma; comprensione nella norma');
+  }else{
   tt(0,'STAI-Y – Ansia di stato e di tratto','Tratto: 58 (elevato) · Stato: 52');tt(0,'BDI-II','Punteggio 11 – minimo');
   tt(1,'MBI – Maslach Burnout Inventory','Esaurimento emotivo alto; depersonalizzazione media');
   tt(5,'SDAG / SDAI (insegnanti)','Disattenzione sopra soglia; iperattività nella norma');tt(5,'CBCL 6-18','Problemi di attenzione: area borderline');
-  tt(8,'PDSS – Panic Disorder Severity Scale','Punteggio 14 – moderato');
+  tt(8,'PDSS – Panic Disorder Severity Scale','Punteggio 14 – moderato');}
   patients.forEach(p=>delete p.slots);
   return db;
 }
@@ -553,7 +575,7 @@ function makeInvoice(db,pat,list,date){
 }
 
 /* ---------- stato ---------- */
-let DB=null,VER=0,USERNAME='',HAS_REC=false,LAST_BACKUP=null,LOGO_VER=null,APP_V='',LIC={accepted:false,ts:null,v:''};
+let DEMO=false,DB=null,VER=0,USERNAME='',HAS_REC=false,LAST_BACKUP=null,LOGO_VER=null,APP_V='',LIC={accepted:false,ts:null,v:''};
 const backupDue=()=>!LAST_BACKUP||Date.now()-LAST_BACKUP>7*864e5;
 const backupAgo=()=>{if(!LAST_BACKUP)return 'mai';const g=Math.floor((Date.now()-LAST_BACKUP)/864e5);return g===0?'oggi':g===1?'ieri':`${g} giorni fa`};
 /* ---------- comunicazione con il server ---------- */
@@ -875,6 +897,9 @@ function vProfile(){
     <p style="margin:0"><b>PsicoLogo</b>${APP_V?` · versione ${esc(APP_V)}`:''}<br><span class="muted small">© 2026 Danilo Daidone. Tutti i diritti riservati.</span></p>
     ${LIC.ts?`<p class="muted small" style="margin:0">Condizioni di licenza accettate il ${new Date(LIC.ts).toLocaleDateString('it-IT')}.</p>`:''}
     <div><button type="button" class="btn small" data-act="about">Leggi le condizioni di licenza</button></div></div></section></div>
+  ${DEMO?`<section class="panel" style="border-color:var(--warn)"><header><h2>Server dimostrativo</h2><span class="chip warn">Demo</span></header><div class="body row" style="justify-content:space-between;align-items:center">
+    <p class="muted" style="margin:0;max-width:62ch">Cancella tutti i dati (pazienti, fatture, documenti, logo, utente) e riporta l’app alla prima configurazione, pronta per la prossima dimostrazione.</p>
+    <button type="button" class="btn danger" data-act="demoReset">Azzera demo</button></div></section>`:''}
   <section class="panel"><header><h2>Codice di recupero</h2>${HAS_REC?'<span class="chip good">Attivo</span>':'<span class="chip bad">Non creato</span>'}</header><div class="body row" style="justify-content:space-between;align-items:center">
     <p class="muted" style="margin:0;max-width:62ch">${HAS_REC?'Serve se dimentichi la password. Se l’hai perso o pensi che qualcuno l’abbia visto, generane uno nuovo: il precedente smette di funzionare.':'Non hai ancora un codice di recupero: se dimentichi la password non potresti rientrare da solo. Crealo adesso e conservalo al sicuro.'}</p>
     <button type="button" class="btn ${HAS_REC?'':'primary'}" data-act="newRec">${HAS_REC?'Genera un nuovo codice':'Crea il codice di recupero'}</button></div></section>
@@ -882,7 +907,7 @@ function vProfile(){
   <section class="panel" id="backup"><header><h2>Backup sul tuo computer</h2>${backupDue()?'<span class="chip warn">Da fare</span>':'<span class="chip good">Aggiornato</span>'}</header><div class="body" style="display:flex;flex-direction:column;gap:12px"><p class="muted" style="margin:0;max-width:62ch">Ultimo backup scaricato: <b>${backupAgo()}</b>. Il file contiene tutti i dati e i documenti, cifrati con una password che scegli tu. Il server fa anche un backup automatico ogni giorno, ma sullo stesso server: una copia sul tuo computer ti protegge se il server si guasta. Ti consigliamo di scaricarlo ogni settimana.</p><div class="row"><button type="button" class="btn primary" data-act="bkDown">Scarica il backup</button><button type="button" class="btn" data-act="bkRestore">Ripristina da un backup</button></div></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',fattura_pdf:'Fattura in PDF',logo_cambiato:'Logo cambiato',logo_rimosso:'Logo rimosso',licenza_accettata:'Condizioni di licenza accettate',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',fattura_pdf:'Fattura in PDF',logo_cambiato:'Logo cambiato',logo_rimosso:'Logo rimosso',licenza_accettata:'Condizioni di licenza accettate',demo_azzerata:'Demo azzerata',azzeramento_rifiutato:'Azzeramento demo: password errata',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
@@ -976,7 +1001,7 @@ async function aboutModal(acceptMode){
     acceptMode?`<button type="button" class="btn" data-act="logout">Esci</button><button class="btn primary">Accetto le condizioni</button>`:`<button class="btn primary">Chiudi</button>`,
     acceptMode?(()=>{(async()=>{try{await api('/api/license/accept',{method:'POST'});LIC={accepted:true,ts:Date.now(),v:LIC.v};toast('Condizioni accettate')}catch(e){toast(e.message)}})()}):null);
 }
-async function refreshStatus(){try{const s=await api('/api/status');APP_V=s.version||'';LIC={accepted:!!s.licenseAccepted,ts:s.licenseAcceptedAt,v:s.licenseVersion};applyLogo(s.logo);return s}catch(e){return null}}
+async function refreshStatus(){try{const s=await api('/api/status');APP_V=s.version||'';DEMO=!!s.demo;LIC={accepted:!!s.licenseAccepted,ts:s.licenseAcceptedAt,v:s.licenseVersion};applyLogo(s.logo);return s}catch(e){return null}}
 async function checkLicense(){const s=await refreshStatus();if(s&&s.logged&&!s.licenseAccepted)aboutModal(true)}
 
 /* ---------- fatture in PDF ---------- */
@@ -1316,6 +1341,12 @@ document.addEventListener('click',e=>{
     case 'about':aboutModal(false);break;
     case 'uiStyle':setUI('style',el.dataset.v);break;
     case 'uiPal':setUI('pal',el.dataset.v);toast('Colori: '+PALETTE[el.dataset.v][0]);break;
+    case 'demoReset':modal('Azzera la demo',`<p style="margin:0">Tutti i dati di questa installazione vengono <b>cancellati</b> e l’app torna alla prima configurazione. Sul server <b>non resta nessuna copia</b>: l’operazione non si può annullare.</p>
+      <label class="fl" for="drPw">La tua password<input type="password" id="drPw" name="pw" autocomplete="current-password"></label><p id="drMsg" class="err" hidden></p>`,
+      `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary" style="background:var(--bad);border-color:var(--bad)">Azzera tutto</button>`,
+      f=>{const m=$('#drMsg');if(!f.pw){m.textContent='Inserisci la password.';m.hidden=false;return false}
+        (async()=>{try{clearTimeout(saveTimer);dirty=false;await api('/api/demo/reset',{method:'POST',body:{password:f.pw}});try{localStorage.removeItem('pl_ui')}catch(e){}location.reload()}
+          catch(e){m.textContent=e.message;m.hidden=false}})();return false});break;
     case 'logoPick':$('#logoUp').click();break;
     case 'logoReset':removeLogo();break;
     case 'pdfOpen':invoicePdf(id,'open');break;
@@ -1371,7 +1402,7 @@ document.addEventListener('submit',e=>{
     const me={titolo:d.titolo,nome:d.nome.trim(),cognome:d.cognome.trim(),professione:d.professione,qualifica:d.qualifica.trim()||pr.label,albo:d.albo.trim(),piva:d.piva,regime:d.regime,cassa:pr.cassa,cassaNome:pr.cassaNome,prest:pr.prest,tariffa:pr.tariffa,tariffaVal:pr.tariffaVal};
     const st={id:'s'+uid(),nome:d.snome.trim(),indirizzo:d.sind.trim(),nota:'',costo:{tipo:'nessuno',valore:0},col:'--c1',orari:{},attivo:true};
     let data;
-    if(d.sample){data=seed();data.me=Object.assign(data.me,me)}else data=emptyDB(me,st);
+    if(d.sample){data=seed(d.professione,st);data.me=Object.assign(data.me,me)}else data=emptyDB(me,st);
     const btn=$('#suBtn');btn.disabled=true;
     (async()=>{try{const r=await api('/api/setup',{method:'POST',body:{code:d.code.trim(),username:un,password:d.pw1,data,acceptLicense:true}});await loadData();f.reset();enterApp();
         if(!d.sample){S.view='studi';render()}
@@ -1392,7 +1423,7 @@ $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')close()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)close()});
 MQ.addEventListener('change',()=>{if(S.view==='agenda')render()});
 (async()=>{
-  try{const s=await api('/api/status');APP_V=s.version||'';LIC={accepted:!!s.licenseAccepted,ts:s.licenseAcceptedAt,v:s.licenseVersion};applyLogo(s.logo);
+  try{const s=await api('/api/status');APP_V=s.version||'';DEMO=!!s.demo;LIC={accepted:!!s.licenseAccepted,ts:s.licenseAcceptedAt,v:s.licenseVersion};applyLogo(s.logo);
     if(!s.configured){showSetup();if(!s.setupEnabled){const e=$('#suErr');e.textContent='Sul server manca il codice di installazione: controlla il file di configurazione.';e.hidden=false}return}
     if(s.logged){await loadData();enterApp()}else showLogin()}
   catch(e){showLogin('Server non raggiungibile. Riprova tra poco.')}

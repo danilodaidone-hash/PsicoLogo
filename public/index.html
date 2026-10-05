@@ -469,7 +469,9 @@ function makeInvoice(db,pat,list,date){
 }
 
 /* ---------- stato ---------- */
-let DB=null,VER=0,USERNAME='',HAS_REC=false;
+let DB=null,VER=0,USERNAME='',HAS_REC=false,LAST_BACKUP=null;
+const backupDue=()=>!LAST_BACKUP||Date.now()-LAST_BACKUP>7*864e5;
+const backupAgo=()=>{if(!LAST_BACKUP)return 'mai';const g=Math.floor((Date.now()-LAST_BACKUP)/864e5);return g===0?'oggi':g===1?'ieri':`${g} giorni fa`};
 /* ---------- comunicazione con il server ---------- */
 async function api(url,opts={}){
   const r=await fetch(url,{method:opts.method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json','X-PsicoLogo':'1'},body:opts.body?JSON.stringify(opts.body):undefined});
@@ -477,7 +479,7 @@ async function api(url,opts={}){
   if(!r.ok){const e=new Error(j.error||`Errore ${r.status}`);e.status=r.status;e.body=j;throw e}
   return j;
 }
-async function loadData(){const r=await api('/api/data');DB=r.data;VER=r.version;USERNAME=r.username;HAS_REC=!!r.hasRecovery}
+async function loadData(){const r=await api('/api/data');DB=r.data;VER=r.version;USERNAME=r.username;HAS_REC=!!r.hasRecovery;LAST_BACKUP=r.lastBackup||null}
 const setSync=(t,cls='')=>{const el=$('#sync');if(el){el.textContent=t;el.className='sync '+cls}};
 let dirty=false,saving=false,saveTimer=null;
 function save(){dirty=true;setSync('Salvataggio…','busy');clearTimeout(saveTimer);saveTimer=setTimeout(flush,500)}
@@ -555,6 +557,7 @@ function vToday(){
   return `<div class="head"><div><div class="eyebrow">${S.studio==='tutti'?'Tutti gli studi':esc(studio(S.studio).nome)}</div><h1>${cap(fmtLong(T))}</h1>
     <div class="sede-where">${where.length?where.map(s=>`<span class="chip sede" style="${sCol(s.id)}"><span class="dot"></span>${esc(s.nome)} · ${s.orari[wd(T)].join('–')}</span>`).join(''):'<span class="muted">Oggi non hai orari di studio.</span>'}</div></div>
     <button class="btn primary" data-act="newAppt">Nuovo appuntamento</button></div>
+  ${backupDue()?`<div class="callout row" style="justify-content:space-between;align-items:center"><span><b>Promemoria settimanale:</b> scarica il backup dei tuoi dati. Ultimo backup: ${backupAgo()}.</span><button type="button" class="btn small primary" data-act="bkDown">Scarica il backup</button></div>`:''}
   <div class="stats">
     <div class="stat"><span>Appuntamenti oggi</span><b>${today.filter(a=>a.status!=='disdetto').length}</b></div>
     <div class="stat"><span>Sedute questa settimana</span><b>${week.length}</b></div>
@@ -783,10 +786,10 @@ function vProfile(){
     <p class="muted" style="margin:0;max-width:62ch">${HAS_REC?'Serve se dimentichi la password. Se l’hai perso o pensi che qualcuno l’abbia visto, generane uno nuovo: il precedente smette di funzionare.':'Non hai ancora un codice di recupero: se dimentichi la password non potresti rientrare da solo. Crealo adesso e conservalo al sicuro.'}</p>
     <button type="button" class="btn ${HAS_REC?'':'primary'}" data-act="newRec">${HAS_REC?'Genera un nuovo codice':'Crea il codice di recupero'}</button></div></section>
   <div class="two"><section class="panel"><header><h2>Ultimi accessi e operazioni</h2></header><div class="tbl-wrap" id="auditBox"><p class="empty">Caricamento…</p></div></section>
-  <section class="panel"><header><h2>Copia dei tuoi dati</h2></header><div class="body"><p class="muted" style="margin:0 0 12px;max-width:60ch">Il server fa un backup automatico ogni giorno e conserva gli ultimi 14. Puoi anche scaricare una copia completa dei dati in formato JSON da tenere al sicuro. Il file non è cifrato: conservalo con cura. I documenti allegati alle cartelle sono inclusi nei backup del server, ma non in questa copia.</p><a class="btn" href="/api/export" download>Scarica una copia dei dati</a></div></section></div>`;
+  <section class="panel" id="backup"><header><h2>Backup sul tuo computer</h2>${backupDue()?'<span class="chip warn">Da fare</span>':'<span class="chip good">Aggiornato</span>'}</header><div class="body" style="display:flex;flex-direction:column;gap:12px"><p class="muted" style="margin:0;max-width:62ch">Ultimo backup scaricato: <b>${backupAgo()}</b>. Il file contiene tutti i dati e i documenti, cifrati con una password che scegli tu. Il server fa anche un backup automatico ogni giorno, ma sullo stesso server: una copia sul tuo computer ti protegge se il server si guasta. Ti consigliamo di scaricarlo ogni settimana.</p><div class="row"><button type="button" class="btn primary" data-act="bkDown">Scarica il backup</button><button type="button" class="btn" data-act="bkRestore">Ripristina da un backup</button></div></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
@@ -833,6 +836,45 @@ function newRecoveryForm(){
     <label class="fl" for="nrPw">Password attuale<input type="password" id="nrPw" name="pw" autocomplete="current-password"></label>`,
     `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Genera il codice</button>`,
     f=>{(async()=>{try{const r=await api('/api/recovery/new',{method:'POST',body:{password:f.pw}});HAS_REC=true;showRecoveryCode(r.recoveryCode,'Ecco il nuovo codice di recupero. Quello precedente non vale più.')}catch(e){toast(e.message)}})();return false});
+}
+
+/* ---------- backup sul computer ---------- */
+function backupDownloadForm(){
+  modal('Scarica il backup',`<p style="margin:0">Scegli una <b>password per il backup</b>: servirà per ripristinarlo. Senza di lei il file non si può aprire, nemmeno da noi.</p>
+    <label class="fl" for="bkP1">Password del backup<input type="password" id="bkP1" name="p1" autocomplete="new-password" placeholder="Almeno 10 caratteri"></label>
+    <label class="fl" for="bkP2">Ripeti la password<input type="password" id="bkP2" name="p2" autocomplete="new-password"></label>
+    <p class="muted small" style="margin:0">Conserva il file in un posto sicuro (una chiavetta, un disco esterno o il tuo cloud personale) e la password separata dal file, per esempio nel gestore di password.</p>
+    <p id="bkMsg" class="err" hidden></p>`,
+    `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary" id="bkGo">Scarica</button>`,
+    f=>{const msg=$('#bkMsg'),bad=m=>{msg.textContent=m;msg.hidden=false};
+      if((f.p1||'').length<10){bad('La password deve avere almeno 10 caratteri.');return false}
+      if(f.p1!==f.p2){bad('Le due password non coincidono.');return false}
+      const btn=$('#bkGo');btn.disabled=true;btn.textContent='Preparazione…';
+      (async()=>{try{const r=await fetch('/api/backup/download',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-PsicoLogo':'1'},body:JSON.stringify({password:f.p1})});
+          if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Backup non riuscito')}
+          const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`psicologo-backup-${T}.plbk`;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000);
+          LAST_BACKUP=Number(r.headers.get('X-Last-Backup'))||Date.now();close();render();toast('Backup scaricato nella cartella Download')}
+        catch(e){btn.disabled=false;btn.textContent='Scarica';bad(e.message)}})();
+      return false});
+}
+function backupRestoreForm(){
+  modal('Ripristina da un backup',`<p class="callout" style="margin:0"><b>Attenzione:</b> tutti i dati attuali (pazienti, agenda, fatture, documenti) verranno <b>sostituiti</b> da quelli del backup. Prima del ripristino il server salva comunque una copia di sicurezza della situazione attuale.</p>
+    <label class="fl" for="rsFile">File di backup (.plbk)<input type="file" id="rsFile" name="file" accept=".plbk"></label>
+    <label class="fl" for="rsBk">Password del backup<input type="password" id="rsBk" name="bk" autocomplete="off"></label>
+    <label class="fl" for="rsAcc">Password del tuo account (per conferma)<input type="password" id="rsAcc" name="acc" autocomplete="current-password"></label>
+    <label class="check" style="border:0;padding:0"><input type="checkbox" id="rsOk" name="ok"><span>Ho capito che i dati attuali verranno sostituiti</span></label>
+    <p id="rsMsg" class="err" hidden></p>`,
+    `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary" id="rsGo" style="background:var(--bad);border-color:var(--bad)">Ripristina</button>`,
+    f=>{const msg=$('#rsMsg'),bad=m=>{msg.textContent=m;msg.hidden=false};const file=$('#rsFile').files[0];
+      if(!file){bad('Scegli il file di backup.');return false}
+      if(!f.bk||!f.acc){bad('Inserisci la password del backup e quella del tuo account.');return false}
+      if(!f.ok){bad('Spunta la conferma per procedere.');return false}
+      const btn=$('#rsGo');btn.disabled=true;btn.textContent='Ripristino in corso…';
+      (async()=>{try{const r=await fetch('/api/backup/restore',{method:'POST',credentials:'same-origin',headers:{'X-PsicoLogo':'1','X-Backup-Password':encodeURIComponent(f.bk),'X-Account-Password':encodeURIComponent(f.acc),'Content-Type':'application/octet-stream'},body:file});
+          const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Ripristino non riuscito');
+          await loadData();close();S.view='oggi';render();toast(`Ripristinato il backup del ${String(j.created).slice(8,10)}/${String(j.created).slice(5,7)}/${String(j.created).slice(0,4)} · ${j.files} ${j.files===1?'documento':'documenti'}`)}
+        catch(e){btn.disabled=false;btn.textContent='Ripristina';bad(e.message)}})();
+      return false});
 }
 
 /* ---------- modali ---------- */
@@ -1101,6 +1143,8 @@ document.addEventListener('click',e=>{
     case 'showRecover':$('#loginForm').hidden=true;$('#recoverForm').hidden=false;$('#rcUser').value=$('#lgUser').value;$('#rcErr').hidden=true;$('#rcCode').focus();break;
     case 'hideRecover':$('#recoverForm').hidden=true;$('#loginForm').hidden=false;break;
     case 'newRec':newRecoveryForm();break;
+    case 'bkDown':backupDownloadForm();break;
+    case 'bkRestore':backupRestoreForm();break;
     case 'copyRec':{const t=$('#recCode').textContent;navigator.clipboard.writeText(t).then(()=>toast('Codice copiato')).catch(()=>{const r=document.createRange();r.selectNodeContents($('#recCode'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Selezionato: premi Cmd+C')});break}
     case 'docPick':docCat=el.dataset.cat||'';$('#docUp').click();break;
     case 'docDel':deleteDoc(id,el);break;

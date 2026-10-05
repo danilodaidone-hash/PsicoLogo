@@ -10,6 +10,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 const zlib = require('node:zlib');
+const { invoicePdf } = require('./pdf.js');
+const APP_VERSION = '1.1.0';
+const LICENSE_VERSION = '1.0';
 
 /* ---------------- configurazione ---------------- */
 const PORT = Number(process.env.PORT || 3000);
@@ -250,7 +253,18 @@ async function api(req, res, url) {
 
   if (url === '/api/status' && method === 'GET') {
     const s = currentSession(req);
-    return send(res, 200, { configured: !!q.account.get(), setupEnabled: !!SETUP_CODE, logged: !!s });
+    const lv = q.getMeta.get('logo_ver'), la = q.getMeta.get('license_accepted');
+    return send(res, 200, { configured: !!q.account.get(), setupEnabled: !!SETUP_CODE, logged: !!s, version: APP_VERSION, licenseVersion: LICENSE_VERSION,
+      logo: lv ? lv.value : null, licenseAccepted: !!(la && JSON.parse(la.value).v === LICENSE_VERSION), licenseAcceptedAt: la ? JSON.parse(la.value).ts : null });
+  }
+  if (url === '/api/license' && method === 'GET') {
+    let t = ''; try { t = fs.readFileSync(path.join(__dirname, 'LICENSE'), 'utf8'); } catch { t = 'Testo della licenza non disponibile.'; }
+    return send(res, 200, t, { 'Content-Type': 'text/plain; charset=utf-8' });
+  }
+  if (url === '/api/logo.png' && method === 'GET') {
+    const l = q.getMeta.get('logo_png');
+    if (!l) return send(res, 404, { error: 'Nessun logo' });
+    return send(res, 200, Buffer.from(l.value, 'base64'), { 'Content-Type': 'image/png', 'Cache-Control': 'no-cache' });
   }
 
   if (url === '/api/setup' && method === 'POST') {
@@ -263,9 +277,12 @@ async function api(req, res, url) {
     if (!validUser(u)) return send(res, 400, { error: 'Nome utente: da 3 a 40 caratteri, solo lettere minuscole, numeri e . _ -' });
     if (!validPw(b.password)) return send(res, 400, { error: 'La password deve avere almeno 10 caratteri.' });
     if (!b.data || typeof b.data !== 'object') return send(res, 400, { error: 'Dati iniziali mancanti.' });
+    if (b.acceptLicense !== true) return send(res, 400, { error: 'Per continuare devi accettare le condizioni di licenza d’uso.' });
     q.insAccount.run(u, hashPassword(b.password), Date.now());
     q.upsertDoc.run(1, encrypt(b.data), Date.now());
     log('configurazione', ip, u);
+    q.setMeta.run('license_accepted', JSON.stringify({ v: LICENSE_VERSION, ts: Date.now() }));
+    log('licenza_accettata', ip, 'versione ' + LICENSE_VERSION);
     newSession(req, res);
     return send(res, 200, { ok: true, version: 1, recoveryCode: newRecoveryCode() });
   }
@@ -343,6 +360,42 @@ async function api(req, res, url) {
     const recoveryCode = newRecoveryCode();
     log('recupero_codice_creato', ip);
     return send(res, 200, { ok: true, recoveryCode });
+  }
+  // ---- fattura in PDF
+  const im = url.match(/^\/api\/invoices\/([A-Za-z0-9_-]{1,40})\.pdf$/);
+  if (im && method === 'GET') {
+    const data = decrypt(q.doc.get().enc);
+    const inv = (data.invoices || []).find(i => i.id === im[1]);
+    if (!inv) return send(res, 404, { error: 'Fattura non trovata.' });
+    const lj = q.getMeta.get('logo_jpg');
+    const pdf = invoicePdf(data, inv, lj ? Buffer.from(lj.value, 'base64') : null);
+    const p = (data.patients || []).find(x => x.id === inv.patientId) || {};
+    const fname = `Fattura-${String(inv.num).replace('/', '-')}-${String(p.cognome || '').replace(/[^A-Za-z0-9]/g, '')}.pdf`;
+    const download = new URL(req.url, 'http://x').searchParams.has('download');
+    log('fattura_pdf', ip, inv.num);
+    return send(res, 200, pdf, { 'Content-Type': 'application/pdf', 'Content-Disposition': `${download ? 'attachment' : 'inline'}; filename="${fname}"`, 'Content-Security-Policy': "default-src 'none'" });
+  }
+  // ---- logo personalizzato (PNG per l'app, JPEG per i PDF)
+  if (url === '/api/logo' && method === 'POST') {
+    const b = await readJson(req);
+    const dec = (u, prefix) => typeof u === 'string' && u.startsWith(prefix) ? Buffer.from(u.slice(prefix.length), 'base64') : null;
+    const png = dec(b.png, 'data:image/png;base64,'), jpg = dec(b.jpg, 'data:image/jpeg;base64,');
+    if (!png || !jpg || png.length > 1500000 || jpg.length > 1500000) return send(res, 400, { error: 'Immagine non valida o troppo grande.' });
+    if (png.readUInt32BE(0) !== 0x89504E47 || jpg[0] !== 0xFF || jpg[1] !== 0xD8) return send(res, 400, { error: 'Formato dell’immagine non valido.' });
+    const ver = String(Date.now());
+    q.setMeta.run('logo_png', png.toString('base64')); q.setMeta.run('logo_jpg', jpg.toString('base64')); q.setMeta.run('logo_ver', ver);
+    log('logo_cambiato', ip);
+    return send(res, 200, { ok: true, logo: ver });
+  }
+  if (url === '/api/logo' && method === 'DELETE') {
+    db.exec("DELETE FROM meta WHERE key IN ('logo_png','logo_jpg','logo_ver')");
+    log('logo_rimosso', ip);
+    return send(res, 200, { ok: true });
+  }
+  if (url === '/api/license/accept' && method === 'POST') {
+    q.setMeta.run('license_accepted', JSON.stringify({ v: LICENSE_VERSION, ts: Date.now() }));
+    log('licenza_accettata', ip, 'versione ' + LICENSE_VERSION);
+    return send(res, 200, { ok: true });
   }
   if (url === '/api/backup/download' && method === 'POST') {
     const b = await readJson(req);

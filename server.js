@@ -20,6 +20,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SETUP_CODE = (process.env.SETUP_CODE || '').trim();
+// Solo per i server dimostrativi: abilita il pulsante "Azzera demo". Mai su un server con dati reali.
+const DEMO_MODE = /^(1|true|si|sì|yes)$/i.test(String(process.env.DEMO_MODE || '').trim());
 const MAX_BODY = 8 * 1024 * 1024;           // 8 MB
 const SESSION_IDLE_MS = 2 * 60 * 60 * 1000; // 2 ore di inattività
 const SESSION_MAX_MS = 12 * 60 * 60 * 1000; // 12 ore al massimo
@@ -254,7 +256,7 @@ async function api(req, res, url) {
   if (url === '/api/status' && method === 'GET') {
     const s = currentSession(req);
     const lv = q.getMeta.get('logo_ver'), la = q.getMeta.get('license_accepted');
-    return send(res, 200, { configured: !!q.account.get(), setupEnabled: !!SETUP_CODE, logged: !!s, version: APP_VERSION, licenseVersion: LICENSE_VERSION,
+    return send(res, 200, { configured: !!q.account.get(), setupEnabled: !!SETUP_CODE, demo: DEMO_MODE, logged: !!s, version: APP_VERSION, licenseVersion: LICENSE_VERSION,
       logo: lv ? lv.value : null, licenseAccepted: !!(la && JSON.parse(la.value).v === LICENSE_VERSION), licenseAcceptedAt: la ? JSON.parse(la.value).ts : null });
   }
   if (url === '/api/license' && method === 'GET') {
@@ -343,6 +345,25 @@ async function api(req, res, url) {
     const v = d.version + 1;
     q.upsertDoc.run(v, encrypt(b.data), Date.now());
     return send(res, 200, { ok: true, version: v });
+  }
+  if (url === '/api/demo/reset' && method === 'POST') {
+    if (!DEMO_MODE) return send(res, 403, { error: 'Funzione disponibile solo sui server dimostrativi.' });
+    const b = await readJson(req);
+    if (!verifyPassword(String(b.password || ''), q.account.get().pw_hash)) { log('azzeramento_rifiutato', ip); return send(res, 400, { error: 'La password non è corretta.' }); }
+    // nessuna copia: si cancellano anche i backup presenti sul server
+    const bdir = path.join(DATA_DIR, 'backups');
+    try { for (const f of fs.readdirSync(bdir)) fs.rmSync(path.join(bdir, f), { force: true }); } catch {}
+    db.exec('PRAGMA secure_delete = ON');
+    db.exec('BEGIN');
+    try {
+      for (const t of ['account', 'doc', 'sessions', 'files', 'meta', 'audit', 'locks']) db.exec(`DELETE FROM ${t}`);
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    db.exec('VACUUM');
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    log('demo_azzerata', ip);
+    res.setHeader('Set-Cookie', sessionCookie(req, '', 0));
+    return send(res, 200, { ok: true });
   }
   if (url === '/api/password' && method === 'POST') {
     const b = await readJson(req);
@@ -498,6 +519,7 @@ function serveStatic(req, res, url) {
 
 /* ---------------- backup giornaliero ---------------- */
 function backup() {
+  if (DEMO_MODE) return; // server dimostrativo: nessuna copia dei dati di prova
   try {
     const dir = path.join(DATA_DIR, 'backups');
     const file = path.join(dir, `psicologo-${new Date().toISOString().slice(0, 10)}.db`);

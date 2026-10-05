@@ -260,6 +260,8 @@ td.neg{color:var(--bad)}
 .conflict{border:1px solid var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--surface));border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:.9rem}
 .conflict b{color:var(--bad)}
 .conflict ul{margin:0;padding-left:18px}
+.ev.online{border-style:dashed;border-width:1.5px}
+.ev .on{font-weight:700;color:var(--pc)}
 </style>
 </head>
 <body>
@@ -415,6 +417,8 @@ function seed(){
     }
     if(p.tutori.length){const d=p.slots[0][0];appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date:iso(addDays(W0,-14+d)),start:hhmm(toMin(p.slots[0][1])+60),dur:50,type:'Colloquio genitori',status:'svolto',invoiceId:null})}
   });
+  studi[0].link='https://meet.google.com/abc-defg-hij';
+  appts.filter(a=>a.patientId===patients[3].id&&a.date>=iso(addDays(W0,-14))).forEach(a=>{a.online=true});patients[3].consensi.online=true;
   appts.filter(a=>a.status==='svolto'&&a.date>=iso(addDays(W0,-21))).forEach((a,i)=>{
     if(a.date>=iso(addDays(W0,-7))&&i%4===0)return;
     notes.push({id:uid(),patientId:a.patientId,apptId:a.id,date:a.date,text:noteTxt[i%3]});
@@ -443,7 +447,7 @@ function emptyDB(me,studio){return {me,studi:[studio],patients:[],appts:[],notes
 
 /* ---------- tariffe e fatture ---------- */
 const priceOf=(a,me)=>a.type==='Valutazione'?me.tariffaVal:me.tariffa;
-const lineOf=(a,me)=>({apptId:a.id,desc:`${a.type==='Seduta'?me.prest:a.type} del ${fmtD(a.date)}${a.status==='assente'?' (assenza non disdettata)':''}`,amount:priceOf(a,me)});
+const lineOf=(a,me)=>({apptId:a.id,desc:`${a.type==='Seduta'?me.prest:a.type}${a.online?' online':''} del ${fmtD(a.date)}${a.status==='assente'?' (assenza non disdettata)':''}`,amount:priceOf(a,me)});
 function calcInv(lines,cassa){const imp=r2(lines.reduce((s,l)=>s+l.amount,0));const contr=r2(imp*cassa/100);const sub=r2(imp+contr);const bollo=sub>77.47?2:0;return{imp,contr,bollo,tot:r2(sub+bollo)}}
 function makeInvoice(db,pat,list,date){
   const me=db.me;const n=db.invoices.filter(i=>i.date.slice(0,4)===date.slice(0,4)).length+1;
@@ -488,7 +492,11 @@ const activeStudi=()=>DB.studi.filter(s=>s.attivo!==false);
 const inStudio=x=>S.studio==='tutti'||x.studioId===S.studio;
 const P_=()=>PROF[DB.me.professione]||PROF.psicologia;
 const meName=()=>[DB.me.titolo,DB.me.nome,DB.me.cognome].filter(Boolean).join(' ');
-const consensoOk=p=>p.consensi.informato&&p.consensi.privacy&&(ageOf(p.nascita)>=18||p.consensi.entrambi);
+const needsOnline=p=>DB.appts.some(a=>a.patientId===p.id&&a.online&&a.status!=='disdetto');
+const consensoOk=p=>p.consensi.informato&&p.consensi.privacy&&(ageOf(p.nascita)>=18||p.consensi.entrambi)&&(!needsOnline(p)||p.consensi.online);
+const consMissing=p=>!p.consensi.informato?'Consenso informato non firmato':!p.consensi.privacy?'Informativa privacy non firmata':(ageOf(p.nascita)<18&&!p.consensi.entrambi)?'Manca la firma del secondo genitore':'Manca il consenso alla seduta online';
+const safeLink=u=>/^https:\/\/[^\s"'<>]+$/i.test(u||'')?u:'';
+const apptLink=a=>a.online?safeLink(a.link||studio(a.studioId).link):'';
 const billable=a=>(a.status==='svolto'||a.status==='assente');
 const unbilled=()=>DB.appts.filter(a=>billable(a)&&!a.invoiceId&&a.date<=T&&inStudio(a));
 const STATI={prenotato:['Prenotato',''],svolto:['Svolto','good'],assente:['Assente','warn'],disdetto:['Disdetto','bad']};
@@ -546,13 +554,13 @@ function vToday(){
     <section class="panel"><header><h2>Appuntamenti di oggi</h2><button class="btn ghost small" data-act="go" data-v="agenda">Apri agenda</button></header>
       ${today.length?`<ul class="list">${today.map(a=>{const p=pat(a.patientId);return `<li style="${sCol(a.studioId)}">
         <span class="tl-time">${a.start}</span><span class="dot"></span>
-        <div class="grow"><a href="#" data-act="openPt" data-id="${p.id}"><b>${esc(full(p))}</b></a><div class="muted" style="font-size:.85rem">${a.type} · ${esc(studio(a.studioId).nome)}</div></div>
+        <div class="grow"><a href="#" data-act="openPt" data-id="${p.id}"><b>${esc(full(p))}</b></a><div class="muted" style="font-size:.85rem">${a.type} · ${esc(studio(a.studioId).nome)}${a.online?` · <b>online</b>${apptLink(a)?` · <a href="${esc(apptLink(a))}" target="_blank" rel="noopener">Apri videochiamata</a>`:''}`:''}</div></div>
         ${a.status==='prenotato'?`<div class="row"><button class="btn small" data-act="status" data-id="${a.id}" data-v="svolto">Svolto</button><button class="btn small" data-act="status" data-id="${a.id}" data-v="assente">Assente</button></div>`:stChip(a.status)}
       </li>`}).join('')}</ul>`:`<p class="empty">Nessun appuntamento oggi. <button class="linkbtn" data-act="newAppt">Prenotane uno</button></p>`}
     </section>
     <section class="panel"><header><h2>Da sistemare</h2></header>
       <ul class="list">
-        ${noCons.map(p=>`<li><span class="chip warn">Consenso</span><div class="grow"><a href="#" data-act="openPt" data-id="${p.id}" data-tab="consensi">${esc(full(p))}</a><div class="muted" style="font-size:.82rem">${!p.consensi.informato?'Consenso informato non firmato':!p.consensi.privacy?'Informativa privacy non firmata':'Manca la firma del secondo genitore'}</div></div></li>`).join('')}
+        ${noCons.map(p=>`<li><span class="chip warn">Consenso</span><div class="grow"><a href="#" data-act="openPt" data-id="${p.id}" data-tab="consensi">${esc(full(p))}</a><div class="muted" style="font-size:.82rem">${consMissing(p)}</div></div></li>`).join('')}
         ${noNote.map(a=>`<li><span class="chip">Nota</span><div class="grow"><a href="#" data-act="note" data-id="${a.id}">${esc(full(pat(a.patientId)))}</a><div class="muted" style="font-size:.82rem">Diario mancante per la seduta del ${fmtD(a.date)}</div></div></li>`).join('')}
         ${ub.length?`<li><span class="chip">Fatture</span><div class="grow"><a href="#" data-act="go" data-v="fatture">${ub.length} ${ub.length>1?'prestazioni':'prestazione'} da fatturare</a></div></li>`:''}
         ${unpaid.slice(0,4).map(i=>`<li><span class="chip bad">Incasso</span><div class="grow"><a href="#" data-act="inv" data-id="${i.id}">Fattura ${i.num} · ${esc(full(pat(i.patientId)))}</a><div class="muted" style="font-size:.82rem">${euro(i.tot)} dal ${fmtD(i.date)}</div></div></li>`).join('')}
@@ -580,7 +588,7 @@ function vAgenda(){
     list.forEach(a=>{if(cluster.length&&toMin(a.start)>=end)flush();cluster.push(a);end=Math.max(end,toMin(a.start)+a.dur)});flush();
     const av=studiDelGiorno(d).filter(s=>S.filter.includes(s.id)&&(S.studio==='tutti'||s.id===S.studio)).map(s=>{const[o,c]=s.orari[wd(d)];const top=Math.max(0,(toMin(o)-H0*60)/60*PX),h=Math.min((H1-H0)*PX,(toMin(c)-H0*60)/60*PX)-top;return `<div class="avail" style="${sCol(s.id)};top:${top}px;height:${h}px"><span>${esc(s.nome)}</span></div>`}).join('');
     return `<div class="daycol ${d===T?'today':''}" data-act="slot" data-d="${d}">${av}${d===T?'<div class="now" id="now" hidden></div>':''}${out.map(a=>{const p=pat(a.patientId),top=(toMin(a.start)-H0*60)/60*PX,h=a.dur/60*PX-2,w=100/a._n;
-      return `<div class="ev ${a.status}" data-act="appt" data-id="${a.id}" style="${sCol(a.studioId)};top:${top}px;height:${h}px;left:calc(${a._l*w}% + 3px);width:calc(${w}% - 6px)" title="${esc(full(p))} · ${a.start} · ${esc(studio(a.studioId).nome)} · ${STATI[a.status][0]}"><b>${esc(p.cognome)} ${esc(p.nome[0])}.</b><span class="t">${a.start} · ${a.type==='Seduta'?esc(studio(a.studioId).nome):a.type}</span></div>`}).join('')}</div>`}).join('');
+      return `<div class="ev ${a.status}${a.online?' online':''}" data-act="appt" data-id="${a.id}" style="${sCol(a.studioId)};top:${top}px;height:${h}px;left:calc(${a._l*w}% + 3px);width:calc(${w}% - 6px)" title="${esc(full(p))} · ${a.start} · ${esc(studio(a.studioId).nome)} · ${STATI[a.status][0]}"><b>${esc(p.cognome)} ${esc(p.nome[0])}.</b><span class="t">${a.start} · ${a.online?'<span class="on">online</span> · ':''}${a.type==='Seduta'?esc(studio(a.studioId).nome):a.type}</span></div>`}).join('')}</div>`}).join('');
   const hours=[...Array(H1-H0)].map((_,i)=>`<span style="top:${i*PX}px">${pad(H0+i)}:00</span>`).join('');
   return `<div class="head"><div><div class="eyebrow">Settimana · ${S.studio==='tutti'?'tutti gli studi':esc(studio(S.studio).nome)}</div><h1>${W.getDate()} ${MESI[W.getMonth()].slice(0,3)} – ${endD.getDate()} ${MESI[endD.getMonth()].slice(0,3)} ${endD.getFullYear()}</h1></div>
     <div class="row"><button class="btn" data-act="wk" data-v="-1" aria-label="Settimana precedente">‹</button><button class="btn" data-act="wk" data-v="0">Oggi</button><button class="btn" data-act="wk" data-v="1" aria-label="Settimana successiva">›</button><button class="btn primary" data-act="newAppt">Nuovo appuntamento</button></div></div>
@@ -671,6 +679,7 @@ function tCons(p){
     ${row('informato','Consenso informato al trattamento','Firmato prima dell’inizio della presa in carico.',c.informato,cb('informato'),'Carica il modulo firmato')}
     ${row('privacy','Informativa privacy (art. 13 GDPR)','Trattamento di dati relativi alla salute ai sensi dell’art. 9 GDPR.',c.privacy,cb('privacy'),'Carica il modulo firmato')}
     ${min?row('entrambi','Firma di entrambi gli esercenti la responsabilità genitoriale','Per i minori serve il consenso di tutti gli esercenti la responsabilità genitoriale.',c.entrambi,cb('entrambi'),'Carica il modulo firmato'):''}
+    ${needsOnline(p)||p.consensi.online?row('online','Consenso alla seduta online','Informazioni su videochiamata, riservatezza e strumenti usati per le sedute a distanza.',p.consensi.online,cb('online'),'Carica il modulo firmato'):''}
     ${row('ts','Opposizione all’invio al Sistema Tessera Sanitaria','Se attiva, le spese di questo paziente non vengono trasmesse per la dichiarazione precompilata.',c.ts==='opposizione',`<input type="checkbox" data-act="ts" ${c.ts==='opposizione'?'checked':''}>`,'Carica la richiesta di opposizione')}
     <p class="muted small" style="margin:8px 0 0">Caricando un modulo firmato, la voce corrispondente viene segnata come firmata. I documenti sono salvati cifrati sul server.</p>
   </div>`;
@@ -788,7 +797,7 @@ async function uploadDocs(files){
     catch(e){toast(`${f.name}: ${e.message}`)}
   }
   const p=pat(S.pid);
-  if(ok&&p&&['informato','privacy','entrambi'].includes(docCat)&&!p.consensi[docCat]){p.consensi[docCat]=true;save();render();toast('Modulo caricato · voce segnata come firmata');return}
+  if(ok&&p&&['informato','privacy','entrambi','online'].includes(docCat)&&!p.consensi[docCat]){p.consensi[docCat]=true;save();render();toast('Modulo caricato · voce segnata come firmata');return}
   if(ok)toast(ok>1?`${ok} documenti caricati`:'Documento caricato');
   loadDocs();
 }
@@ -820,32 +829,37 @@ function apptForm(pre={}){
     <label>Studio<select name="studioId" id="aStudio">${activeStudi().map(x=>opt(x.id,x.nome,st0)).join('')}</select></label>
     <label>Tipo<select name="type" id="aType">${P_().tipi.map(t=>opt(t,t,'Seduta')).join('')}</select></label>
     <label>Durata<select name="dur" id="aDur">${[30,45,50,60,90].map(d=>opt(String(d),d+' minuti',DB.me.professione==='logopedia'?'45':'50')).join('')}</select></label>
+    <label>Modalità<select name="mode" id="aMode"><option value="studio">In studio</option><option value="online">Online (videochiamata)</option></select></label>
+    <label class="span2" id="aLinkWrap" hidden>Link della videochiamata<input name="link" id="aLink" placeholder="https://meet.google.com/…"></label>
     <label>Ripeti ogni settimana per<select name="rep" id="aRep">${[1,4,8,12].map(n=>opt(String(n),n===1?'Solo questa volta':`${n} settimane`,'1')).join('')}</select></label>
     <p class="span2 muted" id="aWarn" style="margin:0;font-size:.85rem"></p></div>`,
     `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Prenota</button>`,
     f=>{
       if(!f.patientId){toast('Scegli un paziente');return false}
+      if(f.mode==='online'&&f.link&&!safeLink(f.link.trim())){toast('Il link deve iniziare con https://');return false}
       const n=+f.rep;let clash=0,viaggio=0;const s=toMin(f.start),e=s+ +f.dur;
       for(let i=0;i<n;i++){const date=iso(addDays(parse(f.date),i*7));
         const same=DB.appts.filter(a=>a.date===date&&a.status!=='disdetto');
         if(same.some(a=>toMin(a.start)<e&&toMin(a.start)+a.dur>s))clash++;
-        if(same.some(a=>a.studioId!==f.studioId&&Math.min(Math.abs(toMin(a.start)-e),Math.abs(s-(toMin(a.start)+a.dur)))<60))viaggio++;
-        DB.appts.push({id:uid(),patientId:f.patientId,studioId:f.studioId,date,start:f.start,dur:+f.dur,type:f.type,status:'prenotato',invoiceId:null})}
+        if(f.mode!=='online'&&same.some(a=>!a.online&&a.studioId!==f.studioId&&Math.min(Math.abs(toMin(a.start)-e),Math.abs(s-(toMin(a.start)+a.dur)))<60))viaggio++;
+        DB.appts.push({id:uid(),online:f.mode==='online',link:f.mode==='online'?(f.link||'').trim():'',patientId:f.patientId,studioId:f.studioId,date,start:f.start,dur:+f.dur,type:f.type,status:'prenotato',invoiceId:null})}
       const w=[clash?`${clash} sovrapposizioni`:'',viaggio?`meno di un’ora per spostarti da un altro studio`:''].filter(Boolean).join(' · ');
       toast((n>1?`${n} appuntamenti prenotati`:'Appuntamento prenotato')+(w?` · attenzione: ${w}`:''));
     });
+  const syncLink=()=>{const on=$('#aMode').value==='online';$('#aLinkWrap').hidden=!on;if(on&&!$('#aLink').dataset.touched)$('#aLink').value=studio($('#aStudio').value).link||''};
+  $('#aMode').addEventListener('change',syncLink);$('#aLink').addEventListener('input',e=>e.target.dataset.touched='1');
   const hint=()=>{const d=$('#aDate').value,t=$('#aStart').value;if(!d||!t)return;const at=studioAt(d,t),sel=$('#aStudio').value,g=GIORNI[wd(d)];
     const ws=studiDelGiorno(d);
     $('#aWarn').textContent=!ws.length?`Di ${g} non hai orari di studio.`:at&&at.id===sel?`Di ${g} alle ${t} sei a ${at.nome}.`:at?`A quell’ora di solito sei a ${at.nome}.`:`Fuori dai tuoi orari: di ${g} sei a ${ws.map(s=>`${s.nome} ${s.orari[wd(d)].join('–')}`).join(', ')}.`};
   const suggest=()=>{const d=$('#aDate').value,t=$('#aStart').value;if(!d||!t)return;const at=studioAt(d,t);if(at&&S.studio==='tutti')$('#aStudio').value=at.id;hint()};
   $('#aPt').addEventListener('change',e=>{const x=pat(e.target.value);if(x&&!studioAt($('#aDate').value,$('#aStart').value)&&activeStudi().some(s=>s.id===x.studioId))$('#aStudio').value=x.studioId;hint()});
-  $('#aDate').addEventListener('change',suggest);$('#aStart').addEventListener('change',suggest);$('#aStudio').addEventListener('change',hint);
+  $('#aDate').addEventListener('change',suggest);$('#aStart').addEventListener('change',suggest);$('#aStudio').addEventListener('change',()=>{hint();syncLink()});
   hint();
 }
 function apptDetail(id){
   const a=DB.appts.find(x=>x.id===id),p=pat(a.patientId);
   const note=DB.notes.find(n=>n.apptId===a.id);
-  modal(esc(full(p)),`<dl class="kv"><dt>Quando</dt><dd>${fmtLong(a.date)}, ${a.start}–${hhmm(toMin(a.start)+a.dur)}</dd><dt>Tipo</dt><dd>${a.type}</dd><dt>Studio</dt><dd>${esc(studio(a.studioId).nome)}</dd><dt>Tariffa</dt><dd>${euro(priceOf(a,DB.me))}</dd>${a.invoiceId?`<dt>Fattura</dt><dd class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</dd>`:''}</dl>
+  modal(esc(full(p)),`<dl class="kv"><dt>Quando</dt><dd>${fmtLong(a.date)}, ${a.start}–${hhmm(toMin(a.start)+a.dur)}</dd><dt>Tipo</dt><dd>${a.type}</dd><dt>Studio</dt><dd>${esc(studio(a.studioId).nome)}</dd><dt>Modalità</dt><dd>${a.online?`Online (videochiamata)${apptLink(a)?` · <a href="${esc(apptLink(a))}" target="_blank" rel="noopener">Apri la videochiamata</a>`:' · <span class="muted">nessun link indicato</span>'}`:'In studio'}</dd><dt>Tariffa</dt><dd>${euro(priceOf(a,DB.me))}</dd>${a.invoiceId?`<dt>Fattura</dt><dd class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</dd>`:''}</dl>
     <label class="fl">Stato<select name="status" id="dStatus" ${a.invoiceId?'disabled':''}>${Object.entries(STATI).map(([k,[l]])=>opt(k,l,a.status)).join('')}</select></label>
     ${note?`<div><div class="eyebrow">Nota di seduta</div><p style="margin:4px 0 0">${esc(note.text)}</p></div>`:''}`,
     `${!a.invoiceId?`<button type="button" class="btn danger" data-act="delAppt" data-id="${a.id}">Elimina</button>`:''}${!a.invoiceId?`<button type="button" class="btn" data-act="editAppt" data-id="${a.id}">Modifica</button>`:''}<button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button>${a.status==='svolto'&&!note?`<button type="button" class="btn" data-act="note" data-id="${a.id}">Scrivi nota</button>`:''}<button class="btn primary">Salva</button>`,
@@ -863,6 +877,8 @@ function apptEditForm(id){
     <label>Studio<select name="studioId" id="eStudio">${studiOpts.map(s=>opt(s.id,s.nome,a.studioId)).join('')}</select></label>
     <label>Tipo<select name="type" id="eType">${[...new Set([...P_().tipi,a.type])].map(t=>opt(t,t,a.type)).join('')}</select></label>
     <label>Durata<select name="dur" id="eDur">${[...new Set([30,45,50,60,90,a.dur])].sort((x,y)=>x-y).map(d=>opt(String(d),d+' minuti',String(a.dur))).join('')}</select></label>
+    <label>Modalità<select name="mode" id="eMode"><option value="studio" ${a.online?'':'selected'}>In studio</option><option value="online" ${a.online?'selected':''}>Online (videochiamata)</option></select></label>
+    <label id="eLinkWrap" ${a.online?'':'hidden'}>Link della videochiamata<input name="link" id="eLink" value="${esc(a.link||'')}" placeholder="${esc(studio(a.studioId).link||'https://…')}"></label>
     <label>Stato<select name="status" id="eStatus">${Object.entries(STATI).map(([k,[l]])=>opt(k,l,a.status)).join('')}</select></label>
     ${series.length?`<label class="check span2" style="border:0;padding:0;flex-direction:row;font-weight:400;color:var(--fg)"><input type="checkbox" name="series" id="eSeries"><span><b>${series.length===1?'Applica anche all’appuntamento successivo della serie':`Applica anche ai ${series.length} appuntamenti successivi della serie`}</b><br><span class="muted small">Stesso giorno e stessa ora ogni settimana: cambiano anche loro orario, studio, tipo e durata, e la data si sposta degli stessi giorni.</span></span></label>`:''}
     <div class="span2 conflict" id="eConflict" hidden></div>
@@ -870,6 +886,7 @@ function apptEditForm(id){
   `<button type="button" class="btn" data-act="appt" data-id="${a.id}">Annulla</button><button class="btn primary" id="eSave">Salva modifiche</button>`,
   f=>{
     if(!f.date||!f.start){toast('Indica data e ora');return false}
+    if(f.mode==='online'&&f.link&&!safeLink(f.link.trim())){toast('Il link deve iniziare con https://');return false}
     const shift=Math.round((parse(f.date)-parse(a.date))/86400000);
     const s=toMin(f.start),e=s+ +f.dur;
     const list=[a,...(f.series?series:[])];
@@ -885,7 +902,7 @@ function apptEditForm(id){
       box.hidden=false;$('#eSave').textContent='Salva comunque';box.scrollIntoView({block:'nearest'});
       return false;
     }
-    list.forEach(x=>Object.assign(x,{date:target(x),start:f.start,studioId:f.studioId,type:f.type,dur:+f.dur}));
+    list.forEach(x=>Object.assign(x,{date:target(x),start:f.start,studioId:f.studioId,type:f.type,dur:+f.dur,online:f.mode==='online',link:f.mode==='online'?(f.link||'').trim():''}));
     a.status=f.status;
     toast((list.length>1?`${list.length} appuntamenti modificati`:'Appuntamento modificato')+(conf.length?' · salvato sopra un orario già occupato':''));
   });
@@ -896,6 +913,7 @@ function apptEditForm(id){
   const hint=()=>{const d=$('#eDate').value,t=$('#eStart').value;if(!d||!t)return;const at=studioAt(d,t);
     $('#eWarn').textContent=at?(at.id===$('#eStudio').value?`Di ${GIORNI[wd(d)]} alle ${t} sei a ${at.nome}.`:`A quell’ora di solito sei a ${at.nome}.`):'Fuori dai tuoi orari di studio.'};
   ['#eDate','#eStart','#eStudio'].forEach(s=>$(s).addEventListener('change',hint));hint();
+  $('#eMode').addEventListener('change',e=>{$('#eLinkWrap').hidden=e.target.value!=='online'});
 }
 function noteForm({apptId,patientId}){
   const a=apptId&&DB.appts.find(x=>x.id===apptId);const p=pat(a?a.patientId:patientId);
@@ -948,7 +966,7 @@ function invDetail(id){
     +(i.bollo?'Imposta di bollo da € 2,00 assolta sull’originale per importi superiori a € 77,47. ':'')
     +(i.ts?'Spesa sanitaria da trasmettere al Sistema Tessera Sanitaria.':'Il paziente si è opposto alla trasmissione dei dati al Sistema Tessera Sanitaria.');
   modal(`Fattura ${i.num}`,`<div class="inv">
-    <div class="top"><div><b>${esc(meName())}</b><br><span class="muted">${esc(m.qualifica)}<br>${esc(m.albo)}<br>P. IVA <span class="mono">${esc(m.piva)}</span><br>Prestazione resa presso: ${esc(st.nome)}${st.indirizzo?`, ${esc(st.indirizzo)}`:''}</span></div>
+    <div class="top"><div><b>${esc(meName())}</b><br><span class="muted">${esc(m.qualifica)}<br>${esc(m.albo)}<br>P. IVA <span class="mono">${esc(m.piva)}</span><br>Prestazione resa presso: ${esc(st.nome)}${st.indirizzo?`, ${esc(st.indirizzo)}`:''}${i.lines.some(l=>{const x=DB.appts.find(y=>y.id===l.apptId);return x&&x.online})?' · anche in modalità online (videochiamata)':''}</span></div>
     <div style="text-align:right"><div class="eyebrow">Fattura n.</div><b class="mono" style="font-size:1.1rem">${i.num}</b><br><span class="muted">del ${fmtD(i.date)}</span></div></div>
     <div><div class="eyebrow">Intestata a</div>${esc(full(p))}${p.cf?` · C.F. <span class="mono">${esc(p.cf)}</span>`:''}${ageOf(p.nascita)<18&&p.tutori[0]?`<br><span class="muted">Pagamento a cura di ${esc(p.tutori[0].nome)}</span>`:''}</div>
     <table><thead><tr><th>Descrizione</th><th class="r">Importo</th></tr></thead><tbody>
@@ -967,6 +985,7 @@ function studioForm(s){
     <label>Nome<input name="nome" id="st-nome" value="${esc(x.nome)}" required placeholder="Es. Studio Prati"></label>
     <label>Indirizzo<input name="indirizzo" id="st-ind" value="${esc(x.indirizzo)}" placeholder="Via, città"></label>
     <label class="span2">Nota<input name="nota" id="st-nota" value="${esc(x.nota)}" placeholder="Es. stanza condivisa, citofono, accordi"></label>
+    <label class="span2">Link videochiamata predefinito, per le sedute online da questo studio (facoltativo)<input name="link" id="st-link" value="${esc(x.link||'')}" placeholder="https://meet.google.com/… oppure https://zoom.us/j/…"></label>
     <label>Costo dello studio<select name="ctipo" id="st-ctipo">${Object.entries(COSTI).map(([k,l])=>opt(k,l,x.costo.tipo)).join('')}</select></label>
     <label>Importo<input type="number" name="cval" id="st-cval" min="0" step="0.5" value="${x.costo.valore}" placeholder="€ o %"></label>
     <div class="span2 fl">Colore<div class="swatches">${COLORI.map(c=>`<label style="--pc:var(${c})"><input type="radio" name="col" value="${c}" ${x.col===c?'checked':''} aria-label="Colore ${c.slice(3)}"><span></span></label>`).join('')}</div></div>
@@ -975,7 +994,8 @@ function studioForm(s){
   f=>{
     if(!f.nome.trim()){toast('Dai un nome allo studio');return false}
     const orari={};for(const i of [0,1,2,3,4,5]){const o=f['o'+i],c=f['c'+i];if(o||c){if(!o||!c||toMin(o)>=toMin(c)){toast(`Controlla l’orario di ${GIORNI[i]}`);return false}orari[i]=[o,c]}}
-    const data={nome:f.nome.trim(),indirizzo:f.indirizzo.trim(),nota:f.nota.trim(),costo:{tipo:f.ctipo,valore:+f.cval||0},col:f.col||x.col,orari};
+    if(f.link&&!safeLink(f.link.trim())){toast('Il link deve iniziare con https://');return false}
+    const data={nome:f.nome.trim(),indirizzo:f.indirizzo.trim(),nota:f.nota.trim(),link:(f.link||'').trim(),costo:{tipo:f.ctipo,valore:+f.cval||0},col:f.col||x.col,orari};
     if(s){Object.assign(s,data);toast('Studio aggiornato')}else{DB.studi.push({id:'s'+uid(),attivo:true,...data});S.filter=null;toast(`${data.nome} aggiunto`)}
   });
 }

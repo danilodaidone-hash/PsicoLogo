@@ -243,7 +243,8 @@ function currentSession(req) {
   q.touchSession.run(now, s.hash);
   return s;
 }
-const validUser = u => /^[a-z0-9._-]{3,40}$/.test(u);
+// il nome utente è l'indirizzo email del professionista
+const validEmail = u => u.length <= 254 && /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/.test(u);
 const validPw = p => typeof p === 'string' && p.length >= 10 && p.length <= 200;
 
 /* ---------------- API ---------------- */
@@ -276,7 +277,7 @@ async function api(req, res, url) {
     const b = await readJson(req);
     if (!safeEq(String(b.code || '').trim(), SETUP_CODE)) { fail('setup:' + ip); log('setup_codice_errato', ip); return send(res, 403, { error: 'Codice di installazione non corretto.' }); }
     const u = String(b.username || '').trim().toLowerCase();
-    if (!validUser(u)) return send(res, 400, { error: 'Nome utente: da 3 a 40 caratteri, solo lettere minuscole, numeri e . _ -' });
+    if (!validEmail(u)) return send(res, 400, { error: 'Inserisci un indirizzo email valido: servirà per accedere.' });
     if (!validPw(b.password)) return send(res, 400, { error: 'La password deve avere almeno 10 caratteri.' });
     if (!b.data || typeof b.data !== 'object') return send(res, 400, { error: 'Dati iniziali mancanti.' });
     if (b.acceptLicense !== true) return send(res, 400, { error: 'Per continuare devi accettare le condizioni di licenza d’uso.' });
@@ -297,7 +298,7 @@ async function api(req, res, url) {
     if (lk) { log('accesso_bloccato', ip, u); return send(res, 429, { error: `Troppi tentativi sbagliati. Accesso bloccato fino alle ${new Date(lk).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' })}.` }); }
     // Verifichiamo sempre una password, anche se l'utente non esiste, per non rivelarlo dai tempi di risposta.
     const ok = acc && acc.username === u ? verifyPassword(String(b.password || ''), acc.pw_hash) : (verifyPassword('x', hashPassword('y')), false);
-    if (!ok) { fail('u:' + u); fail('ip:' + ip); log('accesso_fallito', ip, u); return send(res, 401, { error: 'Nome utente o password non corretti.' }); }
+    if (!ok) { fail('u:' + u); fail('ip:' + ip); log('accesso_fallito', ip, u); return send(res, 401, { error: 'Email o password non corretti.' }); }
     q.delLock.run('u:' + u); q.delLock.run('ip:' + ip);
     newSession(req, res);
     log('accesso', ip, String(req.headers['user-agent'] || '').slice(0, 80));
@@ -312,7 +313,7 @@ async function api(req, res, url) {
     const acc = q.account.get();
     const code = normRecovery(b.code);
     const ok = acc && acc.username === u && acc.recovery_hash && code.length === 16 && verifyPassword(code, acc.recovery_hash);
-    if (!ok) { fail('rec:' + u); fail('ip:' + ip); log('recupero_fallito', ip, u); return send(res, 401, { error: 'Nome utente o codice di recupero non corretti.' }); }
+    if (!ok) { fail('rec:' + u); fail('ip:' + ip); log('recupero_fallito', ip, u); return send(res, 401, { error: 'Email o codice di recupero non corretti.' }); }
     if (!validPw(b.password)) return send(res, 400, { error: 'La nuova password deve avere almeno 10 caratteri.' });
     q.setPw.run(hashPassword(b.password));
     q.delAllSessions.run();
@@ -364,6 +365,15 @@ async function api(req, res, url) {
     log('demo_azzerata', ip);
     res.setHeader('Set-Cookie', sessionCookie(req, '', 0));
     return send(res, 200, { ok: true });
+  }
+  if (url === '/api/username' && method === 'POST') {
+    const b = await readJson(req);
+    if (!verifyPassword(String(b.password || ''), q.account.get().pw_hash)) { log('cambio_email_fallito', ip); return send(res, 400, { error: 'La password non è corretta.' }); }
+    const u = String(b.email || '').trim().toLowerCase();
+    if (!validEmail(u)) return send(res, 400, { error: 'Inserisci un indirizzo email valido.' });
+    db.prepare('UPDATE account SET username = ? WHERE id = 1').run(u);
+    log('email_accesso_cambiata', ip, u);
+    return send(res, 200, { ok: true, username: u });
   }
   if (url === '/api/password' && method === 'POST') {
     const b = await readJson(req);

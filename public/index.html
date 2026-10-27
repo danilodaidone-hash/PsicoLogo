@@ -332,6 +332,9 @@ td.neg{color:var(--bad)}
 [data-style="essenziale"] .login-card{box-shadow:none}
 a{color:var(--accent);text-underline-offset:2px}
 a:hover{text-decoration-thickness:2px}
+.xrows{display:flex;flex-direction:column;gap:8px}
+.xrow{display:grid;grid-template-columns:minmax(0,1fr) 64px 90px auto;gap:6px;align-items:center}
+.xrow input{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--fg);min-width:0}
 /* Pannello Aspetto */
 .uiopts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .uiopt{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px;cursor:pointer;color:var(--fg);min-width:0}
@@ -396,6 +399,9 @@ a:hover{text-decoration-thickness:2px}
         <label class="span2">Iscrizione all’albo<input name="albo" id="su-albo" placeholder="Ordine, sezione e numero"></label>
         <label>Partita IVA<input name="piva" id="su-piva" inputmode="numeric" maxlength="11"></label>
         <label>Regime fiscale<select name="regime" id="su-regime"><option value="forfettario">Forfettario</option><option value="ordinario">Ordinario</option></select></label>
+        <label class="span2">Indirizzo per le fatture (facoltativo)<input name="ind" id="su-ind" placeholder="Via e numero civico" autocomplete="street-address"></label>
+        <label>Comune<input name="citta" id="su-citta" autocomplete="address-level2"></label>
+        <span class="row" style="gap:12px;flex-wrap:nowrap;align-items:end"><label style="flex:1">CAP<input name="cap" id="su-cap" inputmode="numeric" maxlength="5"></label><label style="flex:1">Provincia<input name="prov" id="su-prov" maxlength="2" placeholder="RM" style="text-transform:uppercase"></label></span>
       </fieldset>
       <fieldset class="fgrid"><legend>2 · Il tuo primo studio</legend>
         <label>Nome dello studio<input name="snome" id="su-snome" required placeholder="Es. Studio Re di Roma"></label>
@@ -459,6 +465,13 @@ const ageOf=s=>{if(!s)return null;const b=parse(s);let a=TODAY.getFullYear()-b.g
 const uid=()=>Math.random().toString(36).slice(2,9);
 const initials=p=>((p.nome||'?')[0]+(p.cognome||'?')[0]).toUpperCase();
 const full=p=>`${p.nome} ${p.cognome}`;
+const addrOf=x=>{if(!x)return '';const c=[x.cap,x.citta].filter(Boolean).join(' ')+(x.prov?` (${x.prov})`:'');return [x.ind,c.trim()].filter(Boolean).join(', ')};
+const addrFields=(pre,x,lbl)=>`<label class="span2">${lbl}<input name="ind" id="${pre}-ind" value="${esc(x.ind||'')}" placeholder="Via e numero civico" autocomplete="street-address"></label>
+    <label>Comune<input name="citta" id="${pre}-citta" value="${esc(x.citta||'')}" autocomplete="address-level2"></label>
+    <span class="row" style="gap:12px;flex-wrap:nowrap;align-items:end"><label style="flex:1">CAP<input name="cap" id="${pre}-cap" value="${esc(x.cap||'')}" inputmode="numeric" maxlength="5" autocomplete="postal-code"></label><label style="flex:1">Provincia<input name="prov" id="${pre}-prov" value="${esc(x.prov||'')}" maxlength="2" placeholder="RM" style="text-transform:uppercase"></label></span>`;
+const addrData=f=>({ind:(f.ind||'').trim(),cap:(f.cap||'').trim(),citta:(f.citta||'').trim(),prov:(f.prov||'').trim().toUpperCase()});
+const addrBad=f=>f.cap&&!/^\d{5}$/.test(f.cap.trim())?'Il CAP deve avere 5 cifre':f.prov&&!/^[A-Za-z]{2}$/.test(f.prov.trim())?'La provincia è la sigla di 2 lettere (es. RM)':'';
+const EXTRA_PREST=['Relazione clinica','Certificato','Somministrazione e correzione di test','Restituzione dei risultati','Colloquio con i genitori','Incontro con la scuola','Consulenza telefonica','Supervisione'];
 const isEmail=u=>u.length<=254&&/^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/.test(u);
 const cap=s=>s.replace(/^./,c=>c.toUpperCase());
 
@@ -526,6 +539,8 @@ function seed(prof,st){const L=prof==='logopedia',N=prof==='neuropsicomotricita'
     P('Valerio','Santoro',`${y-38}-05-03`,'SNTVLR..E03H501N','s3',[[2,'17:30']],{tel:'331 204 7789',invio:'Accesso diretto',motivo:'Attacchi di panico sui mezzi pubblici.',anamnesi:'Primo episodio circa otto mesi fa. Si sposta solo in auto. Nessuna patologia organica rilevata.',obiettivi:[{t:'Psicoeducazione sul ciclo del panico',d:true},{t:'Esposizione graduale ai mezzi pubblici',d:false}]}),
     P('Giulia','Pace',`${y-12}-08-22`,'PCAGLI..M62H501S','s3',[[5,'10:00']],{tel:'340 118 6632',tutori:[{nome:'Monica Russo',rel:'Madre',tel:'340 118 6632'},{nome:'Fabio Pace',rel:'Padre',tel:'392 774 1150'}],invio:'Scuola secondaria di primo grado',motivo:'Difficoltà di inserimento alla scuola media.',anamnesi:'Prima media. Ritiro nei momenti non strutturati, si sente esclusa dal gruppo classe.',obiettivi:[{t:'Rinforzo delle abilità sociali',d:false}]}),
   ];
+  const VIE=[['Via Appia Nuova 214','00183','Roma'],['Via Cassia 1021','00189','Roma'],['Via Settevene Palo 48','00055','Ladispoli'],['Via Baldo degli Ubaldi 130','00167','Roma'],['Via Tuscolana 702','00174','Roma'],['Via Ancona 15','00055','Ladispoli'],['Circonvallazione Cornelia 88','00165','Roma'],['Via Aurelia 512','00165','Roma'],['Viale Europa 40','00052','Cerveteri'],['Via Gregorio VII 290','00165','Roma']];
+  patients.forEach((p,i)=>{const [ind,cap,citta]=VIE[i%VIE.length];Object.assign(p,{ind,cap,citta,prov:'RM'})});
   const appts=[],notes=[],tests=[],invoices=[];
   const W0=monday(TODAY);
   const noteTxt=N?['Bambino collaborante. Percorso motorio con equilibrio e salti: migliora la stabilità. Consegnate indicazioni di gioco ai genitori.','Lavoro su motricità fine e prassie: ritaglio e costruzioni. Buona attenzione nella prima parte, poi necessita di pause.','Seduta centrata sulla regolazione: gioco sensoriale e attività a turno. Più tempo di gioco condiviso rispetto all’ultima volta.']:L?['Bambino collaborante. Esercizi di discriminazione e produzione in parola isolata: migliora la precisione. Consegnato materiale per casa ai genitori.','Lavoro sulla lettura di sillabe e parole bisillabe. Velocità in lieve miglioramento; persiste qualche inversione. Da rinforzare a casa.','Seduta centrata su denominazione e frasi brevi. Buona partecipazione, affaticamento nella seconda parte. Proseguire con supporti visivi.']:['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
@@ -589,10 +604,10 @@ function emptyDB(me,studio){return {me,studi:[studio],patients:[],appts:[],notes
 const priceOf=(a,me)=>a.type==='Valutazione'?me.tariffaVal:me.tariffa;
 const lineOf=(a,me)=>({apptId:a.id,desc:`${a.type==='Seduta'?me.prest:a.type}${a.online?' online':''} del ${fmtD(a.date)}${a.status==='assente'?' (assenza non disdettata)':''}`,amount:priceOf(a,me)});
 function calcInv(lines,cassa){const imp=r2(lines.reduce((s,l)=>s+l.amount,0));const contr=r2(imp*cassa/100);const sub=r2(imp+contr);const bollo=sub>77.47?2:0;return{imp,contr,bollo,tot:r2(sub+bollo)}}
-function makeInvoice(db,pat,list,date){
+function makeInvoice(db,pat,list,date,extra=[]){
   const me=db.me;const n=db.invoices.filter(i=>i.date.slice(0,4)===date.slice(0,4)).length+1;
-  const lines=list.map(a=>lineOf(a,me));
-  const inv={id:uid(),num:`${n}/${date.slice(0,4)}`,date,patientId:pat.id,studioId:list[0].studioId,lines,cassa:me.cassa,cassaNome:me.cassaNome,regime:me.regime,...calcInv(lines,me.cassa),paid:false,ts:pat.consensi.ts!=='opposizione'};
+  const lines=list.map(a=>lineOf(a,me)).concat(extra);
+  const inv={id:uid(),num:`${n}/${date.slice(0,4)}`,date,patientId:pat.id,studioId:list[0]?list[0].studioId:pat.studioId,lines,fromAddr:addrOf(me),toAddr:addrOf(pat),cassa:me.cassa,cassaNome:me.cassaNome,regime:me.regime,...calcInv(lines,me.cassa),paid:false,ts:pat.consensi.ts!=='opposizione'};
   list.forEach(a=>a.invoiceId=inv.id);
   return inv;
 }
@@ -772,7 +787,7 @@ function vPatient(){
 function tAnag(p){
   return `<header><h2>Dati anagrafici</h2><button class="btn small" data-act="editPt">Modifica</button></header><div class="body"><dl class="kv">
     <dt>Data di nascita</dt><dd>${p.nascita?`${fmtD(p.nascita)} (${ageOf(p.nascita)} anni)`:'—'}</dd><dt>Codice fiscale</dt><dd class="mono">${esc(p.cf)||'—'}</dd>
-    <dt>Telefono</dt><dd>${esc(p.tel)||'—'}</dd><dt>Email</dt><dd>${esc(p.email)||'—'}</dd>
+    <dt>Indirizzo</dt><dd>${esc(addrOf(p))||'—'}</dd><dt>Telefono</dt><dd>${esc(p.tel)||'—'}</dd><dt>Email</dt><dd>${esc(p.email)||'—'}</dd>
     <dt>Inviato da</dt><dd>${esc(p.invio)||'—'}</dd><dt>Studio abituale</dt><dd>${esc(studio(p.studioId).nome)}</dd>
     ${p.tutori.map(t=>`<dt>${esc(t.rel)}</dt><dd>${esc(t.nome)}${t.tel?` · ${esc(t.tel)}`:''}</dd>`).join('')}
   </dl></div>`;
@@ -838,7 +853,7 @@ function tAppts(p){
 function tInv(p){
   const is=DB.invoices.filter(i=>i.patientId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
   const ub=DB.appts.filter(a=>a.patientId===p.id&&billable(a)&&!a.invoiceId&&a.date<=T);
-  return `<header><h2>Fatture</h2>${ub.length?`<button class="btn small primary" data-act="newInv" data-p="${p.id}">Fattura ${ub.length} ${ub.length>1?'prestazioni':'prestazione'}</button>`:''}</header>${invTable(is,false)}`;
+  return `<header><h2>Fatture</h2><button class="btn small primary" data-act="newInv" data-p="${p.id}">${ub.length?`Fattura ${ub.length} ${ub.length>1?'sedute':'seduta'}`:'Nuova fattura'}</button></header>${invTable(is,false)}`;
 }
 function invTable(is,showPt=true){
   return `<div class="tbl-wrap"><table><thead><tr><th>Numero</th><th>Data</th>${showPt?'<th>Paziente</th>':''}<th>Studio</th><th class="r">Totale</th><th>Sistema TS</th><th>Stato</th></tr></thead><tbody>
@@ -902,7 +917,7 @@ function vProfile(){
   const m=DB.me;
   return `<div class="head"><div><div class="eyebrow">Il tuo account</div><h1>${esc(meName())}</h1></div><button class="btn" data-act="logout">Esci</button></div>
   <div class="two"><section class="panel"><header><h2>Dati professionali e fatturazione</h2><button class="btn small" data-act="editMe">Modifica</button></header><div class="body"><dl class="kv">
-    <dt>Professione</dt><dd>${P_().label}</dd><dt>Qualifica</dt><dd>${esc(m.qualifica)||'—'}</dd><dt>Iscrizione</dt><dd>${esc(m.albo)||'—'}</dd>
+    <dt>Professione</dt><dd>${P_().label}</dd><dt>Qualifica</dt><dd>${esc(m.qualifica)||'—'}</dd><dt>Iscrizione</dt><dd>${esc(m.albo)||'—'}</dd><dt>Indirizzo</dt><dd>${esc(addrOf(m))||'<span class="chip warn">Da inserire per le fatture</span>'}</dd>
     <dt>P. IVA</dt><dd class="mono">${esc(m.piva)||'—'}</dd><dt>Regime</dt><dd>${cap(m.regime)}</dd>
     <dt>Tariffa seduta</dt><dd>${euro(m.tariffa)}</dd><dt>Tariffa valutazione</dt><dd>${euro(m.tariffaVal)}</dd>
     <dt>Rivalsa</dt><dd>${esc(m.cassaNome)} (${m.cassa}%)</dd><dt>Prestazione in fattura</dt><dd>${esc(m.prest)}</dd><dt>Email di accesso</dt><dd><span class="mono">${esc(USERNAME)}</span> ${isEmail(USERNAME)?'':'<span class="chip warn">Da aggiornare</span>'} <button type="button" class="linkbtn" data-act="editLogin">Cambia</button></dd></dl></div></section>
@@ -1221,6 +1236,7 @@ function patientForm(p){
     ${fld('nome','Nome',x.nome,'text','required')}${fld('cognome','Cognome',x.cognome,'text','required')}
     ${fld('nascita','Data di nascita',x.nascita,'date','required')}${fld('cf','Codice fiscale',x.cf)}
     <label class="span2">Studio abituale<select name="studioId" id="pf-studio">${activeStudi().map(r=>opt(r.id,r.nome,x.studioId)).join('')}</select></label>
+    ${addrFields('pf',x,'Indirizzo di residenza')}
     ${fld('tel','Telefono',x.tel,'tel')}${fld('email','Email',x.email,'email')}
     <label class="span2">Inviato da<input name="invio" id="pf-invio" value="${esc(x.invio)}" placeholder="Medico, scuola, accesso diretto…"></label>
     ${p?'':`<label class="span2">Motivo della richiesta<textarea name="motivo" id="pf-motivo"></textarea></label>`}
@@ -1229,24 +1245,43 @@ function patientForm(p){
   </div>`,`<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">${p?'Salva':'Crea paziente'}</button>`,
   f=>{
     if(!f.nome.trim()||!f.cognome.trim()||!f.nascita){toast('Nome, cognome e data di nascita sono obbligatori');return false}
+    if(addrBad(f)){toast(addrBad(f));return false}
     const tutori=[0,1].filter(i=>f['t'+i+'nome'].trim()).map(i=>({nome:f['t'+i+'nome'].trim(),rel:t(i).rel,tel:f['t'+i+'tel']}));
-    const data={nome:f.nome.trim(),cognome:f.cognome.trim(),nascita:f.nascita,cf:f.cf.toUpperCase(),studioId:f.studioId,tel:f.tel,email:f.email,invio:f.invio,tutori};
+    const data={...addrData(f),nome:f.nome.trim(),cognome:f.cognome.trim(),nascita:f.nascita,cf:f.cf.toUpperCase(),studioId:f.studioId,tel:f.tel,email:f.email,invio:f.invio,tutori};
     if(p){Object.assign(p,data);toast('Dati aggiornati')}
     else{const np={id:uid(),...data,motivo:f.motivo,anamnesi:'',obiettivi:[],consensi:{informato:false,privacy:false,entrambi:false,ts:'ok'}};DB.patients.push(np);S.view='paziente';S.pid=np.id;S.ptab='consensi';toast('Paziente creato · raccogli i consensi')}
   });
 }
 function invForm(pid){
   const p=pat(pid);const as=DB.appts.filter(a=>a.patientId===pid&&billable(a)&&!a.invoiceId&&a.date<=T).sort((a,b)=>a.date.localeCompare(b.date));
-  const recalc=()=>{const ids=[...document.querySelectorAll('[name=sel]:checked')].map(i=>i.value);const c=calcInv(as.filter(a=>ids.includes(a.id)).map(a=>lineOf(a,DB.me)),DB.me.cassa);
-    $('#iCalc').innerHTML=`<tr><td>Compenso</td><td class="r num">${euro(c.imp)}</td></tr><tr><td>${esc(DB.me.cassaNome)}</td><td class="r num">${euro(c.contr)}</td></tr><tr><td>Marca da bollo${c.bollo?'':' (non dovuta fino a € 77,47)'}</td><td class="r num">${euro(c.bollo)}</td></tr><tr class="tot"><td>Totale</td><td class="r num">${euro(c.tot)}</td></tr>`};
-  modal(`Nuova fattura · ${esc(full(p))}`,`<div>${as.map(a=>`<label class="check"><input type="checkbox" name="sel" value="${a.id}" checked><span class="grow">${esc(lineOf(a,DB.me).desc)}<br><span class="muted small">${esc(studio(a.studioId).nome)}</span></span><span class="num">${euro(priceOf(a,DB.me))}</span></label>`).join('')}</div>
+  const xrow=()=>`<div class="xrow"><input name="xd" list="xPrest" placeholder="Descrizione della prestazione" aria-label="Descrizione"><input name="xq" type="number" min="1" step="1" value="1" aria-label="Quantità" title="Quantità"><input name="xp" type="number" min="0" step="0.5" placeholder="€" aria-label="Importo unitario" title="Importo unitario"><button type="button" class="btn small ghost" data-x="del" aria-label="Rimuovi">×</button></div>`;
+  const extras=()=>[...document.querySelectorAll('#xRows .xrow')].map(r=>{const d=r.querySelector('[name=xd]').value.trim(),q=Math.max(1,Math.round(+r.querySelector('[name=xq]').value||1)),u=+r.querySelector('[name=xp]').value||0;
+    return {desc:q>1?`${d} (n. ${q} × ${euro(u)})`:d,amount:r2(q*u),qty:q,unit:u,ok:!!d&&u>0,empty:!d&&!u}});
+  const recalc=()=>{const ids=[...document.querySelectorAll('[name=sel]:checked')].map(i=>i.value);
+    const lines=as.filter(a=>ids.includes(a.id)).map(a=>lineOf(a,DB.me)).concat(extras().filter(x=>x.ok));const c=calcInv(lines,DB.me.cassa);
+    $('#iCalc').innerHTML=`<tr><td>Compenso${lines.length?` · ${lines.length} ${lines.length>1?'prestazioni':'prestazione'}`:''}</td><td class="r num">${euro(c.imp)}</td></tr><tr><td>${esc(DB.me.cassaNome)}</td><td class="r num">${euro(c.contr)}</td></tr><tr><td>Marca da bollo${c.bollo?'':' (non dovuta fino a € 77,47)'}</td><td class="r num">${euro(c.bollo)}</td></tr><tr class="tot"><td>Totale</td><td class="r num">${euro(c.tot)}</td></tr>`};
+  modal(`Nuova fattura · ${esc(full(p))}`,`<div class="eyebrow">Sedute da fatturare</div>
+    <div>${as.map(a=>`<label class="check"><input type="checkbox" name="sel" value="${a.id}" checked><span class="grow">${esc(lineOf(a,DB.me).desc)}<br><span class="muted small">${esc(studio(a.studioId).nome)}</span></span><span class="num">${euro(priceOf(a,DB.me))}</span></label>`).join('')||'<p class="muted small" style="margin:4px 0">Nessuna seduta svolta da fatturare.</p>'}</div>
+    <div class="eyebrow">Altre prestazioni</div>
+    <div id="xRows" class="xrows">${as.length?'':xrow()}</div>
+    <datalist id="xPrest">${EXTRA_PREST.concat(P_().tipi.filter(t=>t!=='Seduta')).map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
+    <div><button type="button" class="btn small" data-x="add">+ Aggiungi prestazione</button> <span class="muted small">Es. relazione clinica, certificato, test · quantità e importo unitario</span></div>
     <div class="inv" style="padding:12px 16px"><table><tbody id="iCalc"></tbody></table></div>
     <label class="fl">Data fattura<input type="date" name="date" id="iDate" value="${T}"></label>
+    ${addrOf(p)?'':'<p class="muted small" style="margin:0">Nella scheda del paziente manca l’indirizzo: puoi aggiungerlo prima di emettere la fattura.</p>'}
     <p class="muted" style="margin:0;font-size:.85rem">${p.consensi.ts==='opposizione'?'Il paziente si è opposto: la spesa non sarà inviata al Sistema TS.':'La spesa verrà inclusa nel prossimo invio al Sistema Tessera Sanitaria.'}</p>`,
     `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Emetti fattura</button>`,
-    f=>{const ids=[...document.querySelectorAll('[name=sel]:checked')].map(i=>i.value);if(!ids.length){toast('Seleziona almeno una prestazione');return false}
-      const inv=makeInvoice(DB,p,as.filter(a=>ids.includes(a.id)),f.date||T);DB.invoices.push(inv);setTimeout(()=>invDetail(inv.id),0);toast(`Fattura ${inv.num} emessa`)});
-  $('#sheet').addEventListener('change',e=>{if(e.target.name==='sel')recalc()});recalc();
+    f=>{const ids=[...document.querySelectorAll('[name=sel]:checked')].map(i=>i.value);const xs=extras().filter(x=>!x.empty);
+      if(xs.some(x=>!x.ok)){toast('Completa descrizione e importo delle altre prestazioni, o rimuovi le righe vuote');return false}
+      if(!ids.length&&!xs.length){toast('Seleziona almeno una seduta o aggiungi una prestazione');return false}
+      const inv=makeInvoice(DB,p,as.filter(a=>ids.includes(a.id)),f.date||T,xs.map(({desc,amount,qty,unit})=>({desc,amount,qty,unit})));DB.invoices.push(inv);setTimeout(()=>invDetail(inv.id),0);toast(`Fattura ${inv.num} emessa`)});
+  const sh=$('#mform'); // il form viene ricreato a ogni apertura: niente ascoltatori duplicati
+  sh.addEventListener('change',e=>{if(e.target.name==='sel')recalc()});
+  sh.addEventListener('input',e=>{if(['xd','xq','xp'].includes(e.target.name))recalc()});
+  sh.addEventListener('click',e=>{const b=e.target.closest('[data-x]');if(!b)return;
+    if(b.dataset.x==='add'){$('#xRows').insertAdjacentHTML('beforeend',xrow());$('#xRows .xrow:last-child [name=xd]').focus()}
+    else b.closest('.xrow').remove();recalc()});
+  recalc();
 }
 function invDetail(id){
   const i=DB.invoices.find(x=>x.id===id),p=pat(i.patientId),m=DB.me,st=studio(i.studioId);
@@ -1256,15 +1291,16 @@ function invDetail(id){
     +(i.bollo?'Imposta di bollo da € 2,00 assolta sull’originale per importi superiori a € 77,47. ':'')
     +(i.ts?'Spesa sanitaria da trasmettere al Sistema Tessera Sanitaria.':'Il paziente si è opposto alla trasmissione dei dati al Sistema Tessera Sanitaria.');
   modal(`Fattura ${i.num}`,`<div class="inv">
-    <div class="top"><div><b>${esc(meName())}</b><br><span class="muted">${esc(m.qualifica)}<br>${esc(m.albo)}<br>P. IVA <span class="mono">${esc(m.piva)}</span><br>Prestazione resa presso: ${esc(st.nome)}${st.indirizzo?`, ${esc(st.indirizzo)}`:''}${i.lines.some(l=>{const x=DB.appts.find(y=>y.id===l.apptId);return x&&x.online})?' · anche in modalità online (videochiamata)':''}</span></div>
+    <div class="top"><div><b>${esc(meName())}</b><br><span class="muted">${esc(m.qualifica)}<br>${esc(m.albo)}<br>${(i.fromAddr??addrOf(m))?esc(i.fromAddr??addrOf(m))+'<br>':''}P. IVA <span class="mono">${esc(m.piva)}</span><br>Prestazione resa presso: ${esc(st.nome)}${st.indirizzo?`, ${esc(st.indirizzo)}`:''}${i.lines.some(l=>{const x=DB.appts.find(y=>y.id===l.apptId);return x&&x.online})?' · anche in modalità online (videochiamata)':''}</span></div>
     <div style="text-align:right"><div class="eyebrow">Fattura n.</div><b class="mono" style="font-size:1.1rem">${i.num}</b><br><span class="muted">del ${fmtD(i.date)}</span></div></div>
-    <div><div class="eyebrow">Intestata a</div>${esc(full(p))}${p.cf?` · C.F. <span class="mono">${esc(p.cf)}</span>`:''}${ageOf(p.nascita)<18&&p.tutori[0]?`<br><span class="muted">Pagamento a cura di ${esc(p.tutori[0].nome)}</span>`:''}</div>
+    <div><div class="eyebrow">Intestata a</div>${esc(full(p))}${p.cf?` · C.F. <span class="mono">${esc(p.cf)}</span>`:''}${(i.toAddr??addrOf(p))?`<br><span class="muted">${esc(i.toAddr??addrOf(p))}</span>`:''}${ageOf(p.nascita)<18&&p.tutori[0]?`<br><span class="muted">Pagamento a cura di ${esc(p.tutori[0].nome)}</span>`:''}</div>
     <table><thead><tr><th>Descrizione</th><th class="r">Importo</th></tr></thead><tbody>
       ${i.lines.map(l=>`<tr><td>${esc(l.desc)}</td><td class="r num">${euro(l.amount)}</td></tr>`).join('')}
       <tr><td>${esc(i.cassaNome)}</td><td class="r num">${euro(i.contr)}</td></tr>
       ${i.bollo?`<tr><td>Rimborso marca da bollo</td><td class="r num">${euro(i.bollo)}</td></tr>`:''}
       <tr class="tot"><td>Totale</td><td class="r num">${euro(i.tot)}</td></tr></tbody></table>
     <p class="legal">${legal}</p></div>
+    ${(i.fromAddr??addrOf(m))?'':'<p class="muted small" style="margin:0">Manca il tuo indirizzo: aggiungilo in Profilo → Dati professionali, comparirà nelle prossime fatture.</p>'}
     <label class="check" style="border:0"><input type="checkbox" name="paid" id="iPaid" ${i.paid?'checked':''}><span>Pagamento ricevuto</span></label>`,
     `<button type="button" class="btn" data-act="pdfOpen" data-id="${i.id}">Apri PDF</button><button type="button" class="btn" data-act="pdfDown" data-id="${i.id}">Scarica PDF</button><button type="button" class="btn" data-act="pdfMail" data-id="${i.id}">Invia per email</button><button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button><button class="btn primary">Salva</button>`,
     f=>{i.paid=!!f.paid;toast(i.paid?'Fattura segnata come pagata':'Fattura aggiornata')});
@@ -1309,6 +1345,7 @@ function meForm(){
     ${fld('nome','Nome',m.nome,'text','required')}${fld('cognome','Cognome',m.cognome,'text','required')}
     <label class="span2">Qualifica<input name="qualifica" id="me-qualifica" value="${esc(m.qualifica)}"></label>
     <label class="span2">Iscrizione all’albo<input name="albo" id="me-albo" value="${esc(m.albo)}"></label>
+    ${addrFields('me',m,'Indirizzo per le fatture (sede o domicilio fiscale)')}
     ${fld('piva','Partita IVA',m.piva,'text','inputmode="numeric" maxlength="11"')}
     <label>Regime fiscale<select name="regime" id="me-regime">${opt('forfettario','Forfettario',m.regime)}${opt('ordinario','Ordinario',m.regime)}</select></label>
     ${fld('tariffa','Tariffa seduta (€)',m.tariffa,'number','min="0"')}${fld('tariffaVal','Tariffa valutazione (€)',m.tariffaVal,'number','min="0"')}
@@ -1318,7 +1355,8 @@ function meForm(){
   f=>{
     if(!f.nome.trim()||!f.cognome.trim()){toast('Nome e cognome sono obbligatori');return false}
     if(f.piva&&!/^\d{11}$/.test(f.piva)){toast('La partita IVA deve avere 11 cifre');return false}
-    Object.assign(m,{titolo:f.titolo,professione:f.professione,nome:f.nome.trim(),cognome:f.cognome.trim(),qualifica:f.qualifica.trim(),albo:f.albo.trim(),piva:f.piva,regime:f.regime,tariffa:+f.tariffa||0,tariffaVal:+f.tariffaVal||0,cassa:+f.cassa||0,cassaNome:f.cassaNome.trim(),prest:f.prest.trim()||P_().prest});
+    if(addrBad(f)){toast(addrBad(f));return false}
+    Object.assign(m,addrData(f),{titolo:f.titolo,professione:f.professione,nome:f.nome.trim(),cognome:f.cognome.trim(),qualifica:f.qualifica.trim(),albo:f.albo.trim(),piva:f.piva,regime:f.regime,tariffa:+f.tariffa||0,tariffaVal:+f.tariffaVal||0,cassa:+f.cassa||0,cassaNome:f.cassaNome.trim(),prest:f.prest.trim()||P_().prest});
     toast('Dati aggiornati · valgono per le prossime fatture');
   });
   $('#me-prof').addEventListener('change',e=>{const d=PROF[e.target.value];$('#me-cassa').value=d.cassa;$('#me-cassaNome').value=d.cassaNome;$('#me-prest').value=d.prest});
@@ -1423,6 +1461,7 @@ document.addEventListener('submit',e=>{
     const fail=m=>{err.textContent=m;err.hidden=false};
     if(!d.nome.trim()||!d.cognome.trim())return fail('Inserisci nome e cognome.');
     if(d.piva&&!/^\d{11}$/.test(d.piva))return fail('La partita IVA deve avere 11 cifre.');
+    if(addrBad(d))return fail(addrBad(d)+'.');
     if(!d.snome.trim())return fail('Dai un nome al tuo primo studio.');
     const un=d.username.trim().toLowerCase();if(!isEmail(un))return fail('Inserisci un indirizzo email valido: servirà per accedere.');
     if(!d.code.trim())return fail('Inserisci il codice di installazione.');
@@ -1430,10 +1469,10 @@ document.addEventListener('submit',e=>{
     if(d.pw1.length<10)return fail('La password deve avere almeno 10 caratteri.');
     if(d.pw1!==d.pw2)return fail('Le due password non coincidono.');
     const pr=PROF[d.professione];
-    const me={titolo:d.titolo,nome:d.nome.trim(),cognome:d.cognome.trim(),professione:d.professione,qualifica:d.qualifica.trim()||pr.label,albo:d.albo.trim(),piva:d.piva,regime:d.regime,cassa:pr.cassa,cassaNome:pr.cassaNome,prest:pr.prest,tariffa:pr.tariffa,tariffaVal:pr.tariffaVal};
+    const me={...addrData(d),titolo:d.titolo,nome:d.nome.trim(),cognome:d.cognome.trim(),professione:d.professione,qualifica:d.qualifica.trim()||pr.label,albo:d.albo.trim(),piva:d.piva,regime:d.regime,cassa:pr.cassa,cassaNome:pr.cassaNome,prest:pr.prest,tariffa:pr.tariffa,tariffaVal:pr.tariffaVal};
     const st={id:'s'+uid(),nome:d.snome.trim(),indirizzo:d.sind.trim(),nota:'',costo:{tipo:'nessuno',valore:0},col:'--c1',orari:{},attivo:true};
     let data;
-    if(d.sample){data=seed(d.professione,st);data.me=Object.assign(data.me,me)}else data=emptyDB(me,st);
+    if(d.sample){data=seed(d.professione,st);data.me=Object.assign(data.me,me);data.invoices.forEach(i=>i.fromAddr=addrOf(data.me))}else data=emptyDB(me,st);
     const btn=$('#suBtn');btn.disabled=true;
     (async()=>{try{const r=await api('/api/setup',{method:'POST',body:{code:d.code.trim(),username:un,password:d.pw1,data,acceptLicense:true}});await loadData();f.reset();enterApp();
         if(!d.sample){S.view='studi';render()}

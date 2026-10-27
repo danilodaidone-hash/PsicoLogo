@@ -77,6 +77,7 @@ function build(pages, image) {
 const pad = n => String(n).padStart(2, '0');
 const fmtD = s => { const [y, m, d] = String(s).split('-'); return `${d}/${m}/${y}`; };
 const num = n => (Number(n) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const addrOf = x => { if (!x) return ''; const c = ([x.cap, x.citta].filter(Boolean).join(' ') + (x.prov ? ` (${x.prov})` : '')).trim(); return [x.ind, c].filter(Boolean).join(', '); };
 const age = s => { if (!s) return 99; const b = new Date(s), t = new Date(); let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return a; };
 
 // Fattura sanitaria in PDF a partire dai dati dell'app
@@ -97,7 +98,8 @@ function invoicePdf(data, inv, logoJpeg) {
   // professionista
   let y = top;
   pg.text(L, y, [me.titolo, me.nome, me.cognome].filter(Boolean).join(' '), { size: 13, font: 'F2' }); y -= 16;
-  for (const t of [me.qualifica, me.albo, me.piva ? 'P. IVA ' + me.piva : '', st.nome ? `Prestazione resa presso: ${st.nome}${st.indirizzo ? ', ' + st.indirizzo : ''}` : '', online ? 'Anche in modalità online (videochiamata)' : '']) {
+  const fromAddr = inv.fromAddr != null ? inv.fromAddr : addrOf(me), toAddr = inv.toAddr != null ? inv.toAddr : addrOf(p);
+  for (const t of [me.qualifica, me.albo, fromAddr, me.piva ? 'P. IVA ' + me.piva : '', st.nome ? `Prestazione resa presso: ${st.nome}${st.indirizzo ? ', ' + st.indirizzo : ''}` : '', online ? 'Anche in modalità online (videochiamata)' : '']) {
     if (t) { y = pg.wrap(L, y, t, 300, { size: 9.5, gray: 0.3 }); }
   }
   // riquadro fattura
@@ -108,6 +110,7 @@ function invoicePdf(data, inv, logoJpeg) {
   y = Math.min(y, 735) - 22;
   pg.text(L, y, 'INTESTATA A', { size: 8, font: 'F2', gray: 0.45 }); y -= 15;
   pg.text(L, y, `${p.nome || ''} ${p.cognome || ''}`.trim(), { size: 11, font: 'F2' }); y -= 14;
+  if (toAddr) { y = pg.wrap(L, y, toAddr, 300, { size: 9.5, gray: 0.3 }); }
   if (p.cf) { pg.text(L, y, 'C.F. ' + p.cf, { size: 9.5, gray: 0.3 }); y -= 13; }
   if (age(p.nascita) < 18 && p.tutori && p.tutori[0]) { pg.text(L, y, 'Pagamento a cura di ' + p.tutori[0].nome, { size: 9.5, gray: 0.3 }); y -= 13; }
   // righe

@@ -356,7 +356,7 @@ a:hover{text-decoration-thickness:2px}
     </div>
     <div><h1>Accedi</h1><p class="muted" style="margin:4px 0 0">Agenda, pazienti, cartelle e fatture in un unico posto.</p></div>
     <form id="loginForm" novalidate>
-      <label class="fl" for="lgUser">Nome utente<input id="lgUser" name="u" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label class="fl" for="lgUser">Email<input id="lgUser" name="u" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="nome@esempio.it"></label>
       <label class="fl" for="lgPw">Password<span class="pw"><input id="lgPw" name="p" type="password" autocomplete="current-password" required><button type="button" data-act="showPw" aria-controls="lgPw">Mostra</button></span></label>
       <p id="lgErr" class="err" role="alert" hidden></p>
       <button class="btn primary">Accedi</button>
@@ -364,7 +364,7 @@ a:hover{text-decoration-thickness:2px}
     </form>
     <form id="recoverForm" novalidate hidden>
       <p class="muted small" style="margin:0">Usa il <b>codice di recupero</b> che hai salvato alla prima configurazione o dal Profilo. Dopo il cambio ne riceverai uno nuovo: quello usato non varrà più.</p>
-      <label class="fl" for="rcUser">Nome utente<input id="rcUser" name="u" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+      <label class="fl" for="rcUser">Email<input id="rcUser" name="u" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
       <label class="fl" for="rcCode">Codice di recupero<input id="rcCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX" class="mono"></label>
       <label class="fl" for="rcPw1">Nuova password<input id="rcPw1" name="p1" type="password" autocomplete="new-password"></label>
       <label class="fl" for="rcPw2">Ripeti la nuova password<input id="rcPw2" name="p2" type="password" autocomplete="new-password"></label>
@@ -404,7 +404,7 @@ a:hover{text-decoration-thickness:2px}
       </fieldset>
       <fieldset class="fgrid"><legend>3 · Il tuo accesso</legend>
         <label class="span2">Codice di installazione<input name="code" id="su-code" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
-        <label class="span2">Nome utente<input name="username" id="su-user" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="es. n.cognome"></label>
+        <label class="span2">Email (serve per accedere)<input name="username" id="su-user" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="nome@esempio.it"></label>
         <label>Password<input type="password" name="pw1" id="su-pw1" autocomplete="new-password" required placeholder="Almeno 10 caratteri"></label>
         <label>Ripeti password<input type="password" name="pw2" id="su-pw2" autocomplete="new-password" required></label>
       </fieldset>
@@ -459,6 +459,7 @@ const ageOf=s=>{if(!s)return null;const b=parse(s);let a=TODAY.getFullYear()-b.g
 const uid=()=>Math.random().toString(36).slice(2,9);
 const initials=p=>((p.nome||'?')[0]+(p.cognome||'?')[0]).toUpperCase();
 const full=p=>`${p.nome} ${p.cognome}`;
+const isEmail=u=>u.length<=254&&/^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/.test(u);
 const cap=s=>s.replace(/^./,c=>c.toUpperCase());
 
 /* ---------- professione ---------- */
@@ -904,7 +905,7 @@ function vProfile(){
     <dt>Professione</dt><dd>${P_().label}</dd><dt>Qualifica</dt><dd>${esc(m.qualifica)||'—'}</dd><dt>Iscrizione</dt><dd>${esc(m.albo)||'—'}</dd>
     <dt>P. IVA</dt><dd class="mono">${esc(m.piva)||'—'}</dd><dt>Regime</dt><dd>${cap(m.regime)}</dd>
     <dt>Tariffa seduta</dt><dd>${euro(m.tariffa)}</dd><dt>Tariffa valutazione</dt><dd>${euro(m.tariffaVal)}</dd>
-    <dt>Rivalsa</dt><dd>${esc(m.cassaNome)} (${m.cassa}%)</dd><dt>Prestazione in fattura</dt><dd>${esc(m.prest)}</dd><dt>Nome utente</dt><dd class="mono">${esc(USERNAME)}</dd></dl></div></section>
+    <dt>Rivalsa</dt><dd>${esc(m.cassaNome)} (${m.cassa}%)</dd><dt>Prestazione in fattura</dt><dd>${esc(m.prest)}</dd><dt>Email di accesso</dt><dd><span class="mono">${esc(USERNAME)}</span> ${isEmail(USERNAME)?'':'<span class="chip warn">Da aggiornare</span>'} <button type="button" class="linkbtn" data-act="editLogin">Cambia</button></dd></dl></div></section>
   <section class="panel"><header><h2>Cambia password</h2></header><form class="body" data-form="pw" style="display:flex;flex-direction:column;gap:12px">
     <label class="fl" for="pwCur">Password attuale<input type="password" id="pwCur" name="cur" autocomplete="current-password" required></label>
     <label class="fl" for="pwN1">Nuova password<input type="password" id="pwN1" name="n1" autocomplete="new-password" required></label>
@@ -930,7 +931,7 @@ function vProfile(){
   <section class="panel" id="backup"><header><h2>Backup sul tuo computer</h2>${backupDue()?'<span class="chip warn">Da fare</span>':'<span class="chip good">Aggiornato</span>'}</header><div class="body" style="display:flex;flex-direction:column;gap:12px"><p class="muted" style="margin:0;max-width:62ch">Ultimo backup scaricato: <b>${backupAgo()}</b>. Il file contiene tutti i dati e i documenti, cifrati con una password che scegli tu. Il server fa anche un backup automatico ogni giorno, ma sullo stesso server: una copia sul tuo computer ti protegge se il server si guasta. Ti consigliamo di scaricarlo ogni settimana.</p><div class="row"><button type="button" class="btn primary" data-act="bkDown">Scarica il backup</button><button type="button" class="btn" data-act="bkRestore">Ripristina da un backup</button></div></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',fattura_pdf:'Fattura in PDF',logo_cambiato:'Logo cambiato',logo_rimosso:'Logo rimosso',licenza_accettata:'Condizioni di licenza accettate',demo_azzerata:'Demo azzerata',azzeramento_rifiutato:'Azzeramento demo: password errata',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',fattura_pdf:'Fattura in PDF',logo_cambiato:'Logo cambiato',logo_rimosso:'Logo rimosso',licenza_accettata:'Condizioni di licenza accettate',email_accesso_cambiata:'Email di accesso cambiata',cambio_email_fallito:'Cambio email: password errata',demo_azzerata:'Demo azzerata',azzeramento_rifiutato:'Azzeramento demo: password errata',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
@@ -1370,6 +1371,13 @@ document.addEventListener('click',e=>{
       f=>{const m=$('#drMsg');if(!f.pw){m.textContent='Inserisci la password.';m.hidden=false;return false}
         (async()=>{try{clearTimeout(saveTimer);dirty=false;await api('/api/demo/reset',{method:'POST',body:{password:f.pw}});try{localStorage.removeItem('pl_ui')}catch(e){}location.reload()}
           catch(e){m.textContent=e.message;m.hidden=false}})();return false});break;
+    case 'editLogin':modal('Email di accesso',`<p style="margin:0">L’indirizzo email è il tuo nome utente: da ora entrerai con questo. Gli altri dispositivi restano collegati.</p>
+      <label class="fl" for="elMail">Email<input type="email" id="elMail" name="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" value="${isEmail(USERNAME)?esc(USERNAME):''}" placeholder="nome@esempio.it"></label>
+      <label class="fl" for="elPw">Password attuale<input type="password" id="elPw" name="pw" autocomplete="current-password"></label><p id="elMsg" class="err" hidden></p>`,
+      `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary">Salva</button>`,
+      f=>{const m=$('#elMsg'),bad=t=>{m.textContent=t;m.hidden=false;return false};const e=(f.email||'').trim().toLowerCase();
+        if(!isEmail(e))return bad('Inserisci un indirizzo email valido.');if(!f.pw)return bad('Inserisci la password attuale.');
+        (async()=>{try{const r=await api('/api/username',{method:'POST',body:{email:e,password:f.pw}});USERNAME=r.username;close();render();toast('Email di accesso aggiornata')}catch(x){bad(x.message)}})();return false});break;
     case 'logoPick':$('#logoUp').click();break;
     case 'logoReset':removeLogo();break;
     case 'pdfOpen':invoicePdf(id,'open');break;
@@ -1397,14 +1405,14 @@ document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;c
 document.addEventListener('submit',e=>{
   e.preventDefault();const f=e.target;
   if(f.id==='loginForm'){const n=$('#lgUser').value.trim().toLowerCase(),pw=$('#lgPw').value,err=$('#lgErr');
-    if(!n||!pw){err.textContent='Inserisci nome utente e password.';err.hidden=false;return}
+    if(!n||!pw){err.textContent='Inserisci email e password.';err.hidden=false;return}
     const btn=f.querySelector('.primary');btn.disabled=true;
     (async()=>{try{await api('/api/login',{method:'POST',body:{username:n,password:pw}});await loadData();enterApp();toast(`Bentornata/o, ${DB.me.nome}`)}
       catch(e){err.textContent=e.status?e.message:'Server non raggiungibile. Controlla la connessione.';err.hidden=false;$('#lgPw').select()}
       finally{btn.disabled=false}})();return}
   if(f.id==='recoverForm'){const err=$('#rcErr'),bad=m=>{err.textContent=m;err.hidden=false};
     const u=$('#rcUser').value.trim().toLowerCase(),code=$('#rcCode').value,p1=$('#rcPw1').value,p2=$('#rcPw2').value;
-    if(!u||!code.trim())return bad('Inserisci nome utente e codice di recupero.');
+    if(!u||!code.trim())return bad('Inserisci email e codice di recupero.');
     if(p1.length<10)return bad('La nuova password deve avere almeno 10 caratteri.');
     if(p1!==p2)return bad('Le due password non coincidono.');
     const btn=f.querySelector('.primary');btn.disabled=true;
@@ -1416,7 +1424,7 @@ document.addEventListener('submit',e=>{
     if(!d.nome.trim()||!d.cognome.trim())return fail('Inserisci nome e cognome.');
     if(d.piva&&!/^\d{11}$/.test(d.piva))return fail('La partita IVA deve avere 11 cifre.');
     if(!d.snome.trim())return fail('Dai un nome al tuo primo studio.');
-    const un=d.username.trim().toLowerCase();if(!/^[a-z0-9._-]{3,}$/.test(un))return fail('Nome utente: almeno 3 caratteri, solo lettere, numeri e . _ -');
+    const un=d.username.trim().toLowerCase();if(!isEmail(un))return fail('Inserisci un indirizzo email valido: servirà per accedere.');
     if(!d.code.trim())return fail('Inserisci il codice di installazione.');
     if(!d.lic)return fail('Per continuare devi accettare le condizioni di licenza d’uso.');
     if(d.pw1.length<10)return fail('La password deve avere almeno 10 caratteri.');

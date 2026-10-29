@@ -4,3 +4,4 @@ Caddyfile
 INDIRIZZO.txt
 node_modules/
 public/fonts/
+public/comuni.json

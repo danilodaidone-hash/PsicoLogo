@@ -6,6 +6,8 @@ COPY public ./public
 COPY server.js pdf.js LICENSE ./
 # Scarica i caratteri una sola volta, così la pagina non chiama server esterni (Google Fonts).
 RUN node scripts/fetch-fonts.js
+# Elenco dei comuni con provincia e CAP, per compilare gli indirizzi in automatico.
+RUN node scripts/fetch-comuni.js
 ENV NODE_ENV=production DATA_DIR=/data PORT=3000 HOST=0.0.0.0
 USER node
 EXPOSE 3000

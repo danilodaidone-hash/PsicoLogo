@@ -22,6 +22,7 @@ FILES=(
   "LICENSE"
   "public/index.html"
   "scripts/fetch-fonts.js"
+  "scripts/fetch-comuni.js"
   "scripts/reset-password.js"
   "Dockerfile"
   "docker-compose.yml"

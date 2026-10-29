@@ -409,6 +409,8 @@ main{gap:18px}
 [data-style="essenziale"] .login-card{box-shadow:none}
 a{color:var(--accent);text-underline-offset:2px}
 a:hover{text-decoration-thickness:2px}
+.cfmsg{margin:-4px 0 0;font-weight:600}
+.cfmsg.ok{color:var(--good)} .cfmsg.warn{color:var(--warn)} .cfmsg.bad{color:var(--bad)}
 .xrows{display:flex;flex-direction:column;gap:8px}
 .xrow{display:grid;grid-template-columns:minmax(0,1fr) 64px 90px auto;gap:6px;align-items:center}
 .xrow input{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--fg);min-width:0}
@@ -484,7 +486,7 @@ a:hover{text-decoration-thickness:2px}
         <label>Partita IVA<input name="piva" id="su-piva" inputmode="numeric" maxlength="11"></label>
         <label>Regime fiscale<select name="regime" id="su-regime"><option value="forfettario">Forfettario</option><option value="ordinario">Ordinario</option></select></label>
         <label class="span2">Indirizzo per le fatture (facoltativo)<input name="ind" id="su-ind" placeholder="Via e numero civico" autocomplete="street-address"></label>
-        <label>Comune<input name="citta" id="su-citta" autocomplete="address-level2"></label>
+        <label>Comune<input name="citta" id="su-citta" list="dlComuni" autocomplete="off" placeholder="Inizia a scrivere…"></label>
         <span class="row" style="gap:12px;flex-wrap:nowrap;align-items:end"><label style="flex:1">CAP<input name="cap" id="su-cap" inputmode="numeric" maxlength="5"></label><label style="flex:1">Provincia<input name="prov" id="su-prov" maxlength="2" placeholder="RM" style="text-transform:uppercase"></label></span>
       </fieldset>
       <fieldset class="fgrid"><legend>2 · Il tuo primo studio</legend>
@@ -524,6 +526,7 @@ a:hover{text-decoration-thickness:2px}
 </div>
 <div id="modal" class="modal" hidden><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
 <div id="toast" hidden></div>
+<datalist id="dlComuni"></datalist>
 <input type="file" id="logoUp" hidden accept="image/png,image/jpeg">
 <input type="file" id="docUp" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.odt,.txt,.xlsx">
 
@@ -552,7 +555,7 @@ const initials=p=>((p.nome||'?')[0]+(p.cognome||'?')[0]).toUpperCase();
 const full=p=>`${p.nome} ${p.cognome}`;
 const addrOf=x=>{if(!x)return '';const c=[x.cap,x.citta].filter(Boolean).join(' ')+(x.prov?` (${x.prov})`:'');return [x.ind,c.trim()].filter(Boolean).join(', ')};
 const addrFields=(pre,x,lbl)=>`<label class="span2">${lbl}<input name="ind" id="${pre}-ind" value="${esc(x.ind||'')}" placeholder="Via e numero civico" autocomplete="street-address"></label>
-    <label>Comune<input name="citta" id="${pre}-citta" value="${esc(x.citta||'')}" autocomplete="address-level2"></label>
+    <label>Comune<input name="citta" id="${pre}-citta" value="${esc(x.citta||'')}" list="dlComuni" autocomplete="off" placeholder="Inizia a scrivere…"></label>
     <span class="row" style="gap:12px;flex-wrap:nowrap;align-items:end"><label style="flex:1">CAP<input name="cap" id="${pre}-cap" value="${esc(x.cap||'')}" inputmode="numeric" maxlength="5" autocomplete="postal-code"></label><label style="flex:1">Provincia<input name="prov" id="${pre}-prov" value="${esc(x.prov||'')}" maxlength="2" placeholder="RM" style="text-transform:uppercase"></label></span>`;
 const addrData=f=>({ind:(f.ind||'').trim(),cap:(f.cap||'').trim(),citta:(f.citta||'').trim(),prov:(f.prov||'').trim().toUpperCase()});
 const addrBad=f=>f.cap&&!/^\d{5}$/.test(f.cap.trim())?'Il CAP deve avere 5 cifre':f.prov&&!/^[A-Za-z]{2}$/.test(f.prov.trim())?'La provincia è la sigla di 2 lettere (es. RM)':'';
@@ -626,6 +629,7 @@ function seed(prof,st){const L=prof==='logopedia',N=prof==='neuropsicomotricita'
   ];
   const VIE=[['Via Appia Nuova 214','00183','Roma'],['Via Cassia 1021','00189','Roma'],['Via Settevene Palo 48','00055','Ladispoli'],['Via Baldo degli Ubaldi 130','00167','Roma'],['Via Tuscolana 702','00174','Roma'],['Via Ancona 15','00055','Ladispoli'],['Circonvallazione Cornelia 88','00165','Roma'],['Via Aurelia 512','00165','Roma'],['Viale Europa 40','00052','Cerveteri'],['Via Gregorio VII 290','00165','Roma']];
   patients.forEach((p,i)=>{const [ind,cap,citta]=VIE[i%VIE.length];Object.assign(p,{ind,cap,citta,prov:'RM'})});
+  patients.forEach(p=>{if(p.cf.includes('..'))p.cf=cfBuild(p.nome,p.cognome,p.nascita,+p.cf.slice(9,11)>40?'F':'M',p.cf.slice(11,15))});
   const appts=[],notes=[],tests=[],invoices=[];
   const W0=monday(TODAY);
   const noteTxt=N?['Bambino collaborante. Percorso motorio con equilibrio e salti: migliora la stabilità. Consegnate indicazioni di gioco ai genitori.','Lavoro su motricità fine e prassie: ritaglio e costruzioni. Buona attenzione nella prima parte, poi necessita di pause.','Seduta centrata sulla regolazione: gioco sensoriale e attività a turno. Più tempo di gioco condiviso rispetto all’ultima volta.']:L?['Bambino collaborante. Esercizi di discriminazione e produzione in parola isolata: migliora la precisione. Consegnato materiale per casa ai genitori.','Lavoro sulla lettura di sillabe e parole bisillabe. Velocità in lieve miglioramento; persiste qualche inversione. Da rinforzare a casa.','Seduta centrata su denominazione e frasi brevi. Buona partecipazione, affaticamento nella seconda parte. Proseguire con supporti visivi.']:['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
@@ -871,7 +875,7 @@ function vPatient(){
 }
 function tAnag(p){
   return `<header><h2>Dati anagrafici</h2><button class="btn small" data-act="editPt">Modifica</button></header><div class="body"><dl class="kv">
-    <dt>Data di nascita</dt><dd>${p.nascita?`${fmtD(p.nascita)} (${ageOf(p.nascita)} anni)`:'—'}</dd><dt>Codice fiscale</dt><dd class="mono">${esc(p.cf)||'—'}</dd>
+    <dt>Data di nascita</dt><dd>${p.nascita?`${fmtD(p.nascita)} (${ageOf(p.nascita)} anni)`:'—'}</dd><dt>Codice fiscale</dt><dd><span class="mono">${esc(p.cf)||'—'}</span>${(()=>{const r=cfAnalyze(p.cf,p);return r.level==='bad'?' <span class="chip bad">Non valido</span>':r.level==='warn'?' <span class="chip warn">Da controllare</span>':''})()}</dd>
     <dt>Indirizzo</dt><dd>${esc(addrOf(p))||'—'}</dd><dt>Telefono</dt><dd>${esc(p.tel)||'—'}</dd><dt>Email</dt><dd>${esc(p.email)||'—'}</dd>
     <dt>Inviato da</dt><dd>${esc(p.invio)||'—'}</dd><dt>Studio abituale</dt><dd>${esc(studio(p.studioId).nome)}</dd>
     ${p.tutori.map(t=>`<dt>${esc(t.rel)}</dt><dd>${esc(t.nome)}${t.tel?` · ${esc(t.tel)}`:''}</dd>`).join('')}
@@ -1132,6 +1136,65 @@ async function aboutModal(acceptMode){
 async function refreshStatus(){try{const s=await api('/api/status');APP_V=s.version||'';DEMO=!!s.demo;LIC={accepted:!!s.licenseAccepted,ts:s.licenseAcceptedAt,v:s.licenseVersion};applyLogo(s.logo);return s}catch(e){return null}}
 async function checkLicense(){const s=await refreshStatus();if(s&&s.logged&&!s.licenseAccepted)aboutModal(true)}
 
+
+/* ---------- comuni: provincia e CAP automatici ---------- */
+const COMUNI={list:null,p:null};
+const normC=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’`]/g,"'").toLowerCase().trim();
+function loadComuni(){if(!COMUNI.p)COMUNI.p=fetch('/comuni.json',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>COMUNI.list=(j&&Array.isArray(j.c)?j.c:[]).map(([n,sg,c,cat])=>({n,sg,caps:c?c.split(' '):[],k:normC(n),cat:cat||''}))).catch(()=>COMUNI.list=[]);return COMUNI.p}
+function comuniFill(q){const dl=$('#dlComuni');if(!dl||!COMUNI.list)return;const k=normC(q);if(k.length<2){dl.innerHTML='';return}
+  const a=COMUNI.list.filter(c=>c.k.startsWith(k)),b=a.length<30?COMUNI.list.filter(c=>!c.k.startsWith(k)&&c.k.includes(k)):[];
+  dl.innerHTML=a.concat(b).slice(0,30).map(c=>`<option value="${esc(c.n)}" label="${esc(c.sg)}${c.caps.length===1?' · '+c.caps[0]:''}">`).join('')}
+function comuneApply(f,quiet){if(!COMUNI.list||!COMUNI.list.length)return;const ci=f.querySelector('[name=citta]'),cap=f.querySelector('[name=cap]'),pr=f.querySelector('[name=prov]');if(!ci||!cap||!pr)return;
+  let m=COMUNI.list.filter(c=>c.k===normC(ci.value));if(m.length>1&&pr.value){const m2=m.filter(c=>c.sg===pr.value.trim().toUpperCase());if(m2.length)m=m2}
+  if(m.length!==1){if(m.length>1&&!quiet)toast(`Ci sono più comuni con questo nome (${m.map(c=>c.sg).join(', ')}): scrivi la provincia`);return}
+  const c=m[0];ci.value=c.n;pr.value=c.sg;
+  if(c.caps.length===1){cap.value=c.caps[0];cap.placeholder='';cap.title=''}
+  else if(c.caps.length>1){cap.placeholder=`${c.caps[0]}–${c.caps.at(-1)}`;cap.title=`${c.n} ha più CAP: scrivi quello della via`;
+    if(!c.caps.includes(cap.value.trim())){cap.value='';if(!quiet)toast(`${c.n} ha più CAP (${c.caps[0]}–${c.caps.at(-1)}): scrivi quello della via`)}}}
+function capApply(f){if(!COMUNI.list||!COMUNI.list.length)return;const ci=f.querySelector('[name=citta]'),cap=f.querySelector('[name=cap]'),pr=f.querySelector('[name=prov]');if(!ci||!cap||!pr)return;
+  const v=cap.value.trim();if(!/^\d{5}$/.test(v))return;
+  if(ci.value.trim()){const m=COMUNI.list.filter(c=>c.k===normC(ci.value)&&(!pr.value||c.sg===pr.value.trim().toUpperCase()));if(m.length===1&&m[0].caps.length&&!m[0].caps.includes(v))toast(`Attenzione: ${v} non è un CAP di ${m[0].n}`);return}
+  const m=COMUNI.list.filter(c=>c.caps.includes(v));
+  if(m.length===1){ci.value=m[0].n;pr.value=m[0].sg;cap.placeholder='';cap.title=''}else if(m.length>1){$('#dlComuni').innerHTML=m.slice(0,30).map(c=>`<option value="${esc(c.n)}" label="${esc(c.sg)}">`).join('');toast(`Il CAP ${v} è di più comuni: scegli il comune`)}}
+document.addEventListener('focusin',e=>{if(e.target.name==='citta'||e.target.name==='cap')loadComuni()});
+document.addEventListener('input',e=>{const t=e.target;if(!t.form)return;
+  if(t.name==='citta'){loadComuni().then(()=>{comuniFill(t.value);if(COMUNI.list.some(c=>c.k===normC(t.value)&&c.n===t.value))comuneApply(t.form,true)})}
+  else if(t.name==='prov'){const v=t.value.toUpperCase();if(v!==t.value)t.value=v}
+  else if(t.name==='cap'&&/^\d{5}$/.test(t.value.trim()))loadComuni().then(()=>capApply(t.form))});
+document.addEventListener('change',e=>{const t=e.target;if(t.form&&t.name==='citta')loadComuni().then(()=>comuneApply(t.form,false))});
+
+
+/* ---------- codice fiscale: formato, carattere di controllo, coerenza con i dati ---------- */
+const CF_OMO='LMNPQRSTUV',CF_MESI='ABCDEHLMPRST';
+const CF_ODD={0:1,1:0,2:5,3:7,4:9,5:13,6:15,7:17,8:19,9:21,A:1,B:0,C:5,D:7,E:9,F:13,G:15,H:17,I:19,J:21,K:2,L:4,M:18,N:20,O:11,P:3,Q:6,R:8,S:12,T:14,U:16,V:10,W:22,X:25,Y:24,Z:23};
+const cfNorm=s=>String(s||'').toUpperCase().replace(/\s+/g,'');
+const cfCheck=c=>{let t=0;for(let i=0;i<15;i++){const ch=c[i];t+=i%2===0?CF_ODD[ch]:(/\d/.test(ch)?+ch:ch.charCodeAt(0)-65)}return String.fromCharCode(65+t%26)};
+const cfDigits=(c,pos)=>c.split('').map((ch,i)=>pos.includes(i)&&CF_OMO.includes(ch)?String(CF_OMO.indexOf(ch)):ch).join('');
+const cfLetters=s=>normC(s).toUpperCase().replace(/[^A-Z]/g,'');
+const cfPart=(s,isName)=>{const l=cfLetters(s),co=l.replace(/[AEIOU]/g,''),vo=l.replace(/[^AEIOU]/g,'');if(isName&&co.length>=4)return co[0]+co[2]+co[3];return (co+vo+'XXX').slice(0,3)};
+function cfBuild(nome,cognome,nascita,sesso,catastale){const [y,m,d]=nascita.split('-');const c=cfPart(cognome)+cfPart(nome,true)+y.slice(2)+CF_MESI[+m-1]+String(+d+(sesso==='F'?40:0)).padStart(2,'0')+catastale;return c+cfCheck(c)}
+// esito: {ok:true|false, level:'ok'|'warn'|'bad'|'', msg}
+function cfAnalyze(raw,p,typing){const c=cfNorm(raw);if(!c)return{level:'',msg:''};
+  if(typing&&c.length<16)return{level:'',msg:`Ancora ${16-c.length} ${16-c.length===1?'carattere':'caratteri'}…`};
+  if(c.length!==16)return{level:'bad',msg:`Il codice fiscale ha 16 caratteri (ne hai scritti ${c.length}).`};
+  if(!/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(c))return{level:'bad',msg:'Il formato non è quello di un codice fiscale: controlla lettere e numeri.'};
+  if(cfCheck(c)!==c[15])return{level:'bad',msg:'L’ultima lettera (carattere di controllo) non torna: probabilmente c’è un errore di battitura.'};
+  const n=cfDigits(c,[6,7,9,10,12,13,14]);const yy=n.slice(6,8),mm=CF_MESI.indexOf(n[8])+1;let dd=+n.slice(9,11);const sesso=dd>40?'F':'M';if(dd>40)dd-=40;
+  const probs=[];
+  if(p.cognome&&cfPart(p.cognome)!==c.slice(0,3))probs.push('al cognome');
+  if(p.nome&&cfPart(p.nome,true)!==c.slice(3,6))probs.push('al nome');
+  if(p.nascita){const [Y,M,D]=p.nascita.split('-');if(Y.slice(2)!==yy||+M!==mm||+D!==dd)probs.push('alla data di nascita')}
+  const cat=n.slice(11,15);let luogo='';
+  const nt=sesso==='F'?'nata':'nato';if(cat[0]==='Z')luogo=`${nt} all’estero`;else if(COMUNI.list){const k=COMUNI.list.find(x=>x.cat===cat);if(k)luogo=`${nt} a ${k.n} (${k.sg})`}
+  const info=luogo||(sesso==='F'?'femmina':'maschio');
+  if(probs.length)return{level:'warn',msg:`Il codice è valido ma non corrisponde ${probs.join(', ').replace(/, ([^,]*)$/,' e $1')}: controlla i dati (${info}).`};
+  return{level:'ok',msg:`Codice fiscale corretto · ${info}`}}
+function cfShow(f){const box=f.querySelector('#pf-cfmsg');if(!box)return;const val=f.querySelector('[name=cf]').value;
+  const r=cfAnalyze(val,{nome:f.querySelector('[name=nome]').value,cognome:f.querySelector('[name=cognome]').value,nascita:f.querySelector('[name=nascita]').value},document.activeElement===f.querySelector('[name=cf]'));
+  box.textContent=r.msg;box.className='span2 small cfmsg '+r.level;box.hidden=!r.msg}
+document.addEventListener('focusout',e=>{const t=e.target;if(t.form&&t.name==='cf'&&t.form.querySelector('#pf-cfmsg'))setTimeout(()=>cfShow(t.form),0)});
+document.addEventListener('input',e=>{const t=e.target;if(t.form&&['cf','nome','cognome','nascita'].includes(t.name)&&t.form.querySelector('#pf-cfmsg')){if(t.name==='cf'){const v=t.value.toUpperCase();if(v!==t.value){const pos=t.selectionStart;t.value=v;t.setSelectionRange(pos,pos)}}cfShow(t.form)}});
+
 /* ---------- fatture in PDF ---------- */
 async function invoicePdf(id,mode){
   if(dirty||saving){clearTimeout(saveTimer);await flush()}
@@ -1323,7 +1386,8 @@ function patientForm(p){
   const fld=(n,l,v,type='text',req='')=>`<label>${l}<input name="${n}" id="pf-${n}" type="${type}" value="${esc(v)}" ${req}></label>`;
   modal(p?'Modifica paziente':'Nuovo paziente',`<div class="fgrid">
     ${fld('nome','Nome',x.nome,'text','required')}${fld('cognome','Cognome',x.cognome,'text','required')}
-    ${fld('nascita','Data di nascita',x.nascita,'date','required')}${fld('cf','Codice fiscale',x.cf)}
+    ${fld('nascita','Data di nascita',x.nascita,'date','required')}${fld('cf','Codice fiscale',x.cf,'text','maxlength="16" autocapitalize="characters" spellcheck="false" autocomplete="off"')}
+    <p class="span2 small cfmsg" id="pf-cfmsg" role="status" hidden></p>
     <label class="span2">Studio abituale<select name="studioId" id="pf-studio">${activeStudi().map(r=>opt(r.id,r.nome,x.studioId)).join('')}</select></label>
     ${addrFields('pf',x,'Indirizzo di residenza')}
     ${fld('tel','Telefono',x.tel,'tel')}${fld('email','Email',x.email,'email')}
@@ -1335,11 +1399,13 @@ function patientForm(p){
   f=>{
     if(!f.nome.trim()||!f.cognome.trim()||!f.nascita){toast('Nome, cognome e data di nascita sono obbligatori');return false}
     if(addrBad(f)){toast(addrBad(f));return false}
+    {const r=cfAnalyze(f.cf,f);if(r.level==='bad'){toast(r.msg);$('#pf-cf').focus();return false}}
     const tutori=[0,1].filter(i=>f['t'+i+'nome'].trim()).map(i=>({nome:f['t'+i+'nome'].trim(),rel:t(i).rel,tel:f['t'+i+'tel']}));
-    const data={...addrData(f),nome:f.nome.trim(),cognome:f.cognome.trim(),nascita:f.nascita,cf:f.cf.toUpperCase(),studioId:f.studioId,tel:f.tel,email:f.email,invio:f.invio,tutori};
+    const data={...addrData(f),nome:f.nome.trim(),cognome:f.cognome.trim(),nascita:f.nascita,cf:cfNorm(f.cf),studioId:f.studioId,tel:f.tel,email:f.email,invio:f.invio,tutori};
     if(p){Object.assign(p,data);toast('Dati aggiornati')}
     else{const np={id:uid(),...data,motivo:f.motivo,anamnesi:'',obiettivi:[],consensi:{informato:false,privacy:false,entrambi:false,ts:'ok'}};DB.patients.push(np);S.view='paziente';S.pid=np.id;S.ptab='consensi';toast('Paziente creato · raccogli i consensi')}
   });
+  const mf=$('#mform');cfShow(mf);loadComuni().then(()=>{if(mf.isConnected)cfShow(mf)});
 }
 function invForm(pid){
   const p=pat(pid);const as=DB.appts.filter(a=>a.patientId===pid&&billable(a)&&!a.invoiceId&&a.date<=T).sort((a,b)=>a.date.localeCompare(b.date));

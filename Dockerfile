@@ -3,7 +3,7 @@ FROM node:22-slim
 WORKDIR /app
 COPY scripts ./scripts
 COPY public ./public
-COPY server.js pdf.js LICENSE ./
+COPY server.js pdf.js telegram.js LICENSE ./
 # Scarica i caratteri una sola volta, così la pagina non chiama server esterni (Google Fonts).
 RUN node scripts/fetch-fonts.js
 # Elenco dei comuni con provincia e CAP, per compilare gli indirizzi in automatico.

@@ -19,6 +19,7 @@ SSH_KEY="$HOME/Desktop/PsicoLogo/ssh-key-2026-09-30.key"
 FILES=(
   "server.js"
   "pdf.js"
+  "telegram.js"
   "LICENSE"
   "public/index.html"
   "scripts/fetch-fonts.js"

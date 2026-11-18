@@ -550,9 +550,9 @@ const tg = require('./telegram.js')({
   readDoc: () => { const d = q.doc.get(); return d ? decrypt(d.enc) : null; },
 });
 tg.start();
-const TG_TICK = Number(process.env.TG_TICK_MS) || 5 * 60 * 1000;
+const TG_TICK = Number(process.env.TG_TICK_MS) || 60 * 1000; // ogni minuto: promemoria 25 ore e 1 ora prima
 setTimeout(() => tg.tick(), Math.min(30 * 1000, TG_TICK));
-setInterval(() => tg.tick(), TG_TICK); // ogni 5 minuti: promemoria per gli appuntamenti di domani
+setInterval(() => tg.tick(), TG_TICK);
 
 backup();
 setInterval(backup, 60 * 60 * 1000); // controlla ogni ora, ne crea al massimo uno al giorno

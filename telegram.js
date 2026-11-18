@@ -9,6 +9,8 @@ const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'l
 const DEFAULT_TEXT = 'Promemoria per {nome}: appuntamento {giorno} alle ore {ora}, {luogo}.\nPuoi confermare o avvisare se non puoi venire con i pulsanti qui sotto.\n\n{professionista}';
 const DEFAULT_TEXT2 = 'Ti ricordo che tra poco, alle ore {ora}, hai l’appuntamento: {luogo}.\n\n{professionista}';
 const OWNER = '__owner';
+// numero di telefono confrontabile: solo cifre, senza prefisso internazionale italiano
+const normTel = t => { let d = String(t || '').replace(/\D/g, ''); if (d.startsWith('00')) d = d.slice(2); if (d.startsWith('39') && d.length >= 11) d = d.slice(2); return d; };
 const TOKEN_RE = /^\d{5,15}:[A-Za-z0-9_-]{30,60}$/;
 const CODE_DAYS = 7;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -88,7 +90,7 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
       nome: p.nome || '', paziente: [p.nome, p.cognome].filter(Boolean).join(' '),
       giorno: dayLabel(a.date), data: fmtDate(a.date), ora: a.start || '',
       studio: s.nome || '', luogo: a.online ? 'seduta online' : [s.nome, s.indirizzo].filter(Boolean).join(', '),
-      professionista: [me.titolo, me.nome, me.cognome].filter(Boolean).join(' '), link,
+      professionista: [me.titolo, me.nome, me.cognome].filter(Boolean).join(' '), link, telefono: me.tel || '',
     };
     const tpl = kind === 2 ? (cfg.text2 || DEFAULT_TEXT2) : (cfg.text || DEFAULT_TEXT);
     let t = String(tpl).slice(0, 1000).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
@@ -173,10 +175,29 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
   async function onUpdate(u) {
     const data = readDoc() || {};
     const pro = [data.me && data.me.titolo, data.me && data.me.nome, data.me && data.me.cognome].filter(Boolean).join(' ') || 'lo studio';
+    // il professionista condivide il proprio numero: se coincide con quello del Profilo, riceve qui le notifiche
+    if (u.message && u.message.contact && u.message.chat && u.message.chat.type === 'private') {
+      const chatId = String(u.message.chat.id), ct = u.message.contact, own = ct.user_id && u.message.from && ct.user_id === u.message.from.id;
+      const mine = normTel(data.me && data.me.tel);
+      if (own && mine.length >= 6 && normTel(ct.phone_number) === mine) {
+        st.setMeta.run('tg_owner_chat', chatId); st.setMeta.run('tg_owner_ts', String(Date.now()));
+        log('telegram_notifiche_collegate', 'telegram', 'numero verificato');
+        try { await call('sendMessage', { chat_id: chatId, text: 'Numero verificato. In questa chat riceverai le conferme e le disdette dei pazienti.', reply_markup: { remove_keyboard: true } }); } catch {}
+        return;
+      }
+      log('telegram_numero_non_corrisponde', 'telegram', '');
+      try { await call('sendMessage', { chat_id: chatId, text: own ? 'Il numero non corrisponde a quello indicato nel Profilo di PsicoLogo: controllalo nei Dati professionali e riprova.' : 'Condividi il tuo numero con il pulsante qui sotto, non quello di un altro contatto.', reply_markup: { remove_keyboard: true } }); } catch {}
+      return;
+    }
     if (u.message && typeof u.message.text === 'string' && u.message.chat && u.message.chat.type === 'private') {
       const chatId = String(u.message.chat.id), text = u.message.text.trim();
       if (/^\/start\b/.test(text)) {
         const code = text.split(/\s+/)[1] || '';
+        if (code === 'pro') {
+          if (normTel(data.me && data.me.tel).length < 6) return reply(chatId, 'Prima inserisci il tuo cellulare in PsicoLogo, nel Profilo → Dati professionali, poi riapri questo link.');
+          try { await call('sendMessage', { chat_id: chatId, text: 'Per ricevere qui le notifiche di PsicoLogo conferma che sei tu: premi il pulsante qui sotto per condividere il tuo numero.', reply_markup: { keyboard: [[{ text: 'Condividi il mio numero', request_contact: true }]], one_time_keyboard: true, resize_keyboard: true } }); } catch (e) { console.error('Telegram:', e.message); }
+          return;
+        }
         const c = code && st.code.get(code);
         if (!c || c.expires < Date.now()) return reply(chatId, code ? 'Questo link non è valido o è scaduto: chiedi allo studio un nuovo link.' : `Questo è il servizio di promemoria di ${pro}. Per attivarlo usa il link personale che ti ha dato lo studio.`);
         st.delCodesFor.run(c.patient_id);

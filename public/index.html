@@ -189,7 +189,9 @@ textarea{width:100%;min-height:90px;padding:10px;border:1px solid var(--line);bo
 .sheet>header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
 .sheet .body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
 .sheet footer{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:14px 20px;border-top:1px solid var(--line)}
-.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.fgrid>.row,.fgrid label>.row{min-width:0}
+.fgrid .row input{width:100%;min-width:0}
 .fgrid label,.fl{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);font-weight:700;min-width:0}
 .fgrid input,.fgrid select,.fgrid textarea,.fl input,.fl select,.fl textarea{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--fg);font-weight:400;font-size:.95rem;min-width:0}
 .span2{grid-column:1/-1}
@@ -239,7 +241,7 @@ textarea{width:100%;min-height:90px;padding:10px;border:1px solid var(--line);bo
   .sheet{align-self:end;border-radius:14px 14px 0 0;max-height:92%}
   .modal{padding:0;align-items:end}
   .demo{display:none}
-  .fgrid{grid-template-columns:1fr}
+  .fgrid{grid-template-columns:minmax(0,1fr)}
   h1{font-size:1.45rem}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -411,6 +413,13 @@ a{color:var(--accent);text-underline-offset:2px}
 a:hover{text-decoration-thickness:2px}
 .cfmsg{margin:-4px 0 0;font-weight:600}
 .cfmsg.ok{color:var(--good)} .cfmsg.warn{color:var(--warn)} .cfmsg.bad{color:var(--bad)}
+.fgrid label.check{flex-direction:row;align-items:flex-start;gap:10px;color:var(--fg);font-weight:400;font-size:.95rem}
+.tglink{gap:8px;align-items:center;padding:4px 0 10px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.tgqr{display:grid;place-items:center}.tgqr svg{width:min(230px,70vw);height:auto;border:1px solid var(--line);border-radius:4px}
+.tgprev{background:var(--surface-2);border-radius:var(--r);padding:10px 12px;font-size:.88rem;display:flex;flex-direction:column;gap:6px}
+.tgbtns{display:flex;gap:6px}.tgbtns span{flex:1;text-align:center;border:1px solid var(--line);border-radius:4px;padding:4px;background:var(--surface);font-size:.8rem;font-weight:600}
+.ev.tg-confermato::after,.ev.tg-disdetta::after,.ev.tg-errore::after,.ev.tg-inviato::after{content:"";position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.ev.tg-confermato::after{background:var(--good)}.ev.tg-disdetta::after{background:var(--bad)}.ev.tg-errore::after{background:var(--warn)}
 .xrows{display:flex;flex-direction:column;gap:8px}
 .xrow{display:grid;grid-template-columns:minmax(0,1fr) 64px 90px auto;gap:6px;align-items:center}
 .xrow input{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--fg);min-width:0}
@@ -527,6 +536,7 @@ a:hover{text-decoration-thickness:2px}
 <div id="modal" class="modal" hidden><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
 <div id="toast" hidden></div>
 <datalist id="dlComuni"></datalist>
+<datalist id="dlNascita"></datalist>
 <input type="file" id="logoUp" hidden accept="image/png,image/jpeg">
 <input type="file" id="docUp" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.odt,.txt,.xlsx">
 
@@ -629,7 +639,7 @@ function seed(prof,st){const L=prof==='logopedia',N=prof==='neuropsicomotricita'
   ];
   const VIE=[['Via Appia Nuova 214','00183','Roma'],['Via Cassia 1021','00189','Roma'],['Via Settevene Palo 48','00055','Ladispoli'],['Via Baldo degli Ubaldi 130','00167','Roma'],['Via Tuscolana 702','00174','Roma'],['Via Ancona 15','00055','Ladispoli'],['Circonvallazione Cornelia 88','00165','Roma'],['Via Aurelia 512','00165','Roma'],['Viale Europa 40','00052','Cerveteri'],['Via Gregorio VII 290','00165','Roma']];
   patients.forEach((p,i)=>{const [ind,cap,citta]=VIE[i%VIE.length];Object.assign(p,{ind,cap,citta,prov:'RM'})});
-  patients.forEach(p=>{if(p.cf.includes('..'))p.cf=cfBuild(p.nome,p.cognome,p.nascita,+p.cf.slice(9,11)>40?'F':'M',p.cf.slice(11,15))});
+  patients.forEach(p=>{if(p.cf.includes('..')){p.sesso=+p.cf.slice(9,11)>40?'F':'M';p.lnasc='Roma (RM)';p.lnascCod=p.cf.slice(11,15);p.cf=cfBuild(p.nome,p.cognome,p.nascita,p.sesso,p.lnascCod)}});
   const appts=[],notes=[],tests=[],invoices=[];
   const W0=monday(TODAY);
   const noteTxt=N?['Bambino collaborante. Percorso motorio con equilibrio e salti: migliora la stabilità. Consegnate indicazioni di gioco ai genitori.','Lavoro su motricità fine e prassie: ritaglio e costruzioni. Buona attenzione nella prima parte, poi necessita di pause.','Seduta centrata sulla regolazione: gioco sensoriale e attività a turno. Più tempo di gioco condiviso rispetto all’ultima volta.']:L?['Bambino collaborante. Esercizi di discriminazione e produzione in parola isolata: migliora la precisione. Consegnato materiale per casa ai genitori.','Lavoro sulla lettura di sillabe e parole bisillabe. Velocità in lieve miglioramento; persiste qualche inversione. Da rinforzare a casa.','Seduta centrata su denominazione e frasi brevi. Buona partecipazione, affaticamento nella seconda parte. Proseguire con supporti visivi.']:['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
@@ -729,7 +739,9 @@ window.addEventListener('beforeunload',e=>{if(dirty||saving){e.preventDefault();
 document.addEventListener('visibilitychange',async()=>{
   if(document.visibilityState!=='visible'||!S.logged||dirty||saving||!$('#modal').hidden)return;
   try{const r=await api('/api/data');if(r.version!==VER){DB=r.data;VER=r.version;render()}}catch(e){if(e.status===401)showLogin('La sessione è scaduta: accedi di nuovo.')}
+  loadTG(true);
 });
+setInterval(()=>{if(S.logged&&document.visibilityState==='visible'&&!dirty&&!saving&&['oggi','agenda','paziente','profilo'].includes(S.view))loadTG(true)},90*1000);
 const MQ=matchMedia('(max-width:760px)');
 const S={view:'oggi',day:null,studio:'tutti',week:0,filter:null,q:'',pid:null,ptab:'anagrafica',invFilter:'tutte',logged:false};
 const pat=id=>DB.patients.find(p=>p.id===id);
@@ -755,7 +767,7 @@ function studioAt(date,time){const m=toMin(time);return studiDelGiorno(date).fin
 
 /* ---------- accesso ---------- */
 function screen(name){$('#login').hidden=name!=='login';$('#setup').hidden=name!=='setup';$('.app').hidden=name!=='app'}
-function enterApp(){setTimeout(checkLicense,300);S.logged=true;S.view='oggi';S.pid=null;S.q='';S.studio='tutti';S.filter=null;screen('app');setSync('Salvato');render();window.scrollTo(0,0)}
+function enterApp(){setTimeout(checkLicense,300);loadTG(true);S.logged=true;S.view='oggi';S.pid=null;S.q='';S.studio='tutti';S.filter=null;screen('app');setSync('Salvato');render();window.scrollTo(0,0)}
 function showLogin(msg){S.logged=false;DB=null;dirty=false;close();screen('login');$('#recoverForm').hidden=true;$('#loginForm').hidden=false;
   $('#lgPw').value='';const err=$('#lgErr');err.textContent=msg||'';err.hidden=!msg;$('#lgUser').focus();}
 function showSetup(){close();screen('setup');$('#suErr').hidden=true;window.scrollTo(0,0)}
@@ -783,6 +795,7 @@ function vToday(){
   const ub=unbilled();const ubTot=ub.reduce((s,a)=>s+priceOf(a,DB.me),0);
   const ym=T.slice(0,7);const incassato=DB.invoices.filter(i=>i.paid&&i.date.slice(0,7)===ym&&inStudio(i)).reduce((s,i)=>s+i.tot,0);
   const noCons=DB.patients.filter(p=>inStudio(p)&&!consensoOk(p));
+  const tgCancel=DB.appts.filter(a=>inStudio(a)&&a.status==='prenotato'&&a.date>=T&&TG.sent&&TG.sent[a.id]&&TG.sent[a.id].status==='disdetta');
   const lim=iso(addDays(TODAY,-14));
   const noNote=DB.appts.filter(a=>inStudio(a)&&a.status==='svolto'&&a.date>=lim&&a.date<=T&&!DB.notes.some(n=>n.apptId===a.id));
   const unpaid=DB.invoices.filter(i=>!i.paid&&inStudio(i));
@@ -801,12 +814,13 @@ function vToday(){
     <section class="panel"><header><h2>Appuntamenti di oggi</h2><button class="btn ghost small" data-act="go" data-v="agenda">Apri agenda</button></header>
       ${today.length?`<ul class="list">${today.map(a=>{const p=pat(a.patientId);return `<li style="${sCol(a.studioId)}">
         <span class="tl-time">${a.start}</span><span class="dot"></span>
-        <div class="grow"><a href="#" data-act="openPt" data-id="${p.id}"><b>${esc(full(p))}</b></a><div class="muted" style="font-size:.85rem">${a.type} · ${esc(studio(a.studioId).nome)}${a.online?` · <b>online</b>${apptLink(a)?` · <a href="${esc(apptLink(a))}" target="_blank" rel="noopener">Apri videochiamata</a>`:''}`:''}</div></div>
+        <div class="grow"><a href="#" data-act="openPt" data-id="${p.id}"><b>${esc(full(p))}</b></a> ${tgLabel(a)}<div class="muted" style="font-size:.85rem">${a.type} · ${esc(studio(a.studioId).nome)}${a.online?` · <b>online</b>${apptLink(a)?` · <a href="${esc(apptLink(a))}" target="_blank" rel="noopener">Apri videochiamata</a>`:''}`:''}</div></div>
         ${a.status==='prenotato'?`<div class="row"><button class="btn small" data-act="status" data-id="${a.id}" data-v="svolto">Svolto</button><button class="btn small" data-act="status" data-id="${a.id}" data-v="assente">Assente</button></div>`:stChip(a.status)}
       </li>`}).join('')}</ul>`:`<p class="empty">Nessun appuntamento oggi. <button class="linkbtn" data-act="newAppt">Prenotane uno</button></p>`}
     </section>
     <section class="panel"><header><h2>Da sistemare</h2></header>
       <ul class="list">
+        ${tgCancel.map(a=>`<li><span class="chip bad">Disdetta</span><div class="grow"><a href="#" data-act="appt" data-id="${a.id}">${esc(full(pat(a.patientId)))}</a><div class="muted" style="font-size:.82rem">Ha chiesto su Telegram di disdire l’appuntamento di ${fmtLong(a.date)} alle ${a.start}</div></div><button type="button" class="btn small" data-act="status" data-id="${a.id}" data-v="disdetto">Segna disdetto</button></li>`).join('')}
         ${noCons.map(p=>`<li><span class="chip warn">Consenso</span><div class="grow"><a href="#" data-act="openPt" data-id="${p.id}" data-tab="consensi">${esc(full(p))}</a><div class="muted" style="font-size:.82rem">${consMissing(p)}</div></div></li>`).join('')}
         ${noNote.map(a=>`<li><span class="chip">Nota</span><div class="grow"><a href="#" data-act="note" data-id="${a.id}">${esc(full(pat(a.patientId)))}</a><div class="muted" style="font-size:.82rem">Diario mancante per la seduta del ${fmtD(a.date)}</div></div></li>`).join('')}
         ${ub.length?`<li><span class="chip">Fatture</span><div class="grow"><a href="#" data-act="go" data-v="fatture">${ub.length} ${ub.length>1?'prestazioni':'prestazione'} da fatturare</a></div></li>`:''}
@@ -836,7 +850,7 @@ function vAgenda(){
     list.forEach(a=>{if(cluster.length&&toMin(a.start)>=end)flush();cluster.push(a);end=Math.max(end,toMin(a.start)+a.dur)});flush();
     const av=studiDelGiorno(d).filter(s=>S.filter.includes(s.id)&&(S.studio==='tutti'||s.id===S.studio)).map(s=>{const[o,c]=s.orari[wd(d)];const top=Math.max(0,(toMin(o)-H0*60)/60*PX),h=Math.min((H1-H0)*PX,(toMin(c)-H0*60)/60*PX)-top;return `<div class="avail" style="${sCol(s.id)};top:${top}px;height:${h}px"><span>${esc(s.nome)}</span></div>`}).join('');
     return `<div class="daycol ${d===T?'today':''}" data-act="slot" data-d="${d}">${av}${d===T?'<div class="now" id="now" hidden></div>':''}${out.map(a=>{const p=pat(a.patientId),top=(toMin(a.start)-H0*60)/60*PX,h=a.dur/60*PX-2,w=100/a._n;
-      return `<div class="ev ${a.status}${a.online?' online':''}" data-act="appt" data-id="${a.id}" style="${sCol(a.studioId)};top:${top}px;height:${h}px;left:calc(${a._l*w}% + 3px);width:calc(${w}% - 6px)" title="${esc(full(p))} · ${a.start} · ${esc(studio(a.studioId).nome)} · ${STATI[a.status][0]}"><b>${esc(p.cognome)} ${esc(p.nome[0])}.</b><span class="t">${a.start} · ${a.online?'<span class="on">online</span> · ':''}${a.type==='Seduta'?esc(studio(a.studioId).nome):a.type}</span></div>`}).join('')}</div>`}).join('');
+      const tr=TG.sent&&TG.sent[a.id];return `<div class="ev ${a.status}${a.online?' online':''}${tr?' tg-'+tr.status:''}" data-act="appt" data-id="${a.id}" style="${sCol(a.studioId)};top:${top}px;height:${h}px;left:calc(${a._l*w}% + 3px);width:calc(${w}% - 6px)" title="${esc(full(p))} · ${a.start} · ${esc(studio(a.studioId).nome)} · ${STATI[a.status][0]}${tr?' · Telegram: '+({inviato:'promemoria inviato',confermato:'confermato',disdetta:'chiede di disdire',errore:'promemoria non inviato'}[tr.status]||''):''}"><b>${esc(p.cognome)} ${esc(p.nome[0])}.</b><span class="t">${a.start} · ${a.online?'<span class="on">online</span> · ':''}${a.type==='Seduta'?esc(studio(a.studioId).nome):a.type}</span></div>`}).join('')}</div>`}).join('');
   const hours=[...Array(H1-H0)].map((_,i)=>`<span style="top:${i*PX}px">${pad(H0+i)}:00</span>`).join('');
   return `<div class="head"><div><div class="eyebrow">Settimana · ${S.studio==='tutti'?'tutti gli studi':esc(studio(S.studio).nome)}</div><h1>${W.getDate()} ${MESI[W.getMonth()].slice(0,3)} – ${endD.getDate()} ${MESI[endD.getMonth()].slice(0,3)} ${endD.getFullYear()}</h1></div>
     <div class="row"><button class="btn" data-act="wk" data-v="-1" aria-label="Settimana precedente">‹</button><button class="btn" data-act="wk" data-v="0">Oggi</button><button class="btn" data-act="wk" data-v="1" aria-label="Settimana successiva">›</button><button class="btn primary" data-act="newAppt">Nuovo appuntamento</button></div></div>
@@ -875,7 +889,7 @@ function vPatient(){
 }
 function tAnag(p){
   return `<header><h2>Dati anagrafici</h2><button class="btn small" data-act="editPt">Modifica</button></header><div class="body"><dl class="kv">
-    <dt>Data di nascita</dt><dd>${p.nascita?`${fmtD(p.nascita)} (${ageOf(p.nascita)} anni)`:'—'}</dd><dt>Codice fiscale</dt><dd><span class="mono">${esc(p.cf)||'—'}</span>${(()=>{const r=cfAnalyze(p.cf,p);return r.level==='bad'?' <span class="chip bad">Non valido</span>':r.level==='warn'?' <span class="chip warn">Da controllare</span>':''})()}</dd>
+    <dt>Data di nascita</dt><dd>${p.nascita?`${fmtD(p.nascita)} (${ageOf(p.nascita)} anni)`:'—'}</dd><dt>Luogo di nascita</dt><dd>${esc(p.lnasc)||'—'}</dd><dt>Sesso</dt><dd>${p.sesso==='F'?'Femmina':p.sesso==='M'?'Maschio':'—'}</dd><dt>Codice fiscale</dt><dd><span class="mono">${esc(p.cf)||'—'}</span>${(()=>{const r=cfAnalyze(p.cf,p);return r.level==='bad'?' <span class="chip bad">Non valido</span>':r.level==='warn'?' <span class="chip warn">Da controllare</span>':''})()}</dd>
     <dt>Indirizzo</dt><dd>${esc(addrOf(p))||'—'}</dd><dt>Telefono</dt><dd>${esc(p.tel)||'—'}</dd><dt>Email</dt><dd>${esc(p.email)||'—'}</dd>
     <dt>Inviato da</dt><dd>${esc(p.invio)||'—'}</dd><dt>Studio abituale</dt><dd>${esc(studio(p.studioId).nome)}</dd>
     ${p.tutori.map(t=>`<dt>${esc(t.rel)}</dt><dd>${esc(t.nome)}${t.tel?` · ${esc(t.tel)}`:''}</dd>`).join('')}
@@ -929,6 +943,8 @@ function tCons(p){
     ${row('privacy','Informativa privacy (art. 13 GDPR)','Trattamento di dati relativi alla salute ai sensi dell’art. 9 GDPR.',c.privacy,cb('privacy'),'Carica il modulo firmato')}
     ${min?row('entrambi','Firma di entrambi gli esercenti la responsabilità genitoriale','Per i minori serve il consenso di tutti gli esercenti la responsabilità genitoriale.',c.entrambi,cb('entrambi'),'Carica il modulo firmato'):''}
     ${needsOnline(p)||p.consensi.online?row('online','Consenso alla seduta online','Informazioni su videochiamata, riservatezza e strumenti usati per le sedute a distanza.',p.consensi.online,cb('online'),'Carica il modulo firmato'):''}
+    ${row('telegram','Promemoria degli appuntamenti su Telegram','Il paziente (o il genitore) accetta di ricevere su Telegram promemoria con data, ora e luogo degli appuntamenti.',c.telegram,cb('telegram'),'Carica il modulo firmato')}
+    ${tgConsBlock(p)}
     ${row('ts','Opposizione all’invio al Sistema Tessera Sanitaria','Se attiva, le spese di questo paziente non vengono trasmesse per la dichiarazione precompilata.',c.ts==='opposizione',`<input type="checkbox" data-act="ts" ${c.ts==='opposizione'?'checked':''}>`,'Carica la richiesta di opposizione')}
     <p class="muted small" style="margin:8px 0 0">Caricando un modulo firmato, la voce corrispondente viene segnata come firmata. I documenti sono salvati cifrati sul server.</p>
   </div>`;
@@ -936,7 +952,7 @@ function tCons(p){
 function tAppts(p){
   const as=DB.appts.filter(a=>a.patientId===p.id).sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
   return `<header><h2>Appuntamenti</h2><button class="btn small" data-act="newAppt" data-p="${p.id}">Prenota</button></header><div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Ora</th><th>Tipo</th><th>Studio</th><th>Stato</th><th>Fattura</th></tr></thead><tbody>
-  ${as.map(a=>`<tr class="click" data-act="appt" data-id="${a.id}"><td>${fmtLong(a.date)}</td><td class="num">${a.start}</td><td>${a.type}</td><td>${esc(studio(a.studioId).nome)}</td><td>${stChip(a.status)}</td><td>${a.invoiceId?`<span class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</span>`:billable(a)&&a.date<=T?'<span class="chip warn">Da fatturare</span>':''}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nessun appuntamento.</td></tr>'}
+  ${as.map(a=>`<tr class="click" data-act="appt" data-id="${a.id}"><td>${fmtLong(a.date)}</td><td class="num">${a.start}</td><td>${a.type}</td><td>${esc(studio(a.studioId).nome)}</td><td>${stChip(a.status)} ${tgLabel(a)}</td><td>${a.invoiceId?`<span class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</span>`:billable(a)&&a.date<=T?'<span class="chip warn">Da fatturare</span>':''}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nessun appuntamento.</td></tr>'}
   </tbody></table></div>`;
 }
 function tInv(p){
@@ -1017,6 +1033,7 @@ function vProfile(){
     <p class="muted small" style="margin:0">Almeno 10 caratteri. Cambiandola, gli altri dispositivi collegati vengono disconnessi.</p>
     <div><button class="btn primary">Aggiorna password</button></div></form></section></div>
   ${vAspetto()}
+  ${vTelegram()}
   <div class="two"><section class="panel"><header><h2>Logo</h2></header><div class="body row" style="gap:16px;align-items:center;flex-wrap:nowrap">
     <div class="logoprev">${LOGO_VER?`<img src="/api/logo.png?v=${LOGO_VER}" alt="Logo attuale">`:'<span class="muted small">PsicoLogo</span>'}</div>
     <div style="display:flex;flex-direction:column;gap:8px;min-width:0"><p class="muted small" style="margin:0">Il tuo logo compare nella barra laterale, nella schermata di accesso, nell’icona del browser e sulle fatture in PDF. PNG o JPG, meglio quadrato o orizzontale.</p>
@@ -1035,7 +1052,7 @@ function vProfile(){
   <section class="panel" id="backup"><header><h2>Backup sul tuo computer</h2>${backupDue()?'<span class="chip warn">Da fare</span>':'<span class="chip good">Aggiornato</span>'}</header><div class="body" style="display:flex;flex-direction:column;gap:12px"><p class="muted" style="margin:0;max-width:62ch">Ultimo backup scaricato: <b>${backupAgo()}</b>. Il file contiene tutti i dati e i documenti, cifrati con una password che scegli tu. Il server fa anche un backup automatico ogni giorno, ma sullo stesso server: una copia sul tuo computer ti protegge se il server si guasta. Ti consigliamo di scaricarlo ogni settimana.</p><div class="row"><button type="button" class="btn primary" data-act="bkDown">Scarica il backup</button><button type="button" class="btn" data-act="bkRestore">Ripristina da un backup</button></div></div></section></div>`;
 }
 
-const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',fattura_pdf:'Fattura in PDF',logo_cambiato:'Logo cambiato',logo_rimosso:'Logo rimosso',licenza_accettata:'Condizioni di licenza accettate',email_accesso_cambiata:'Email di accesso cambiata',cambio_email_fallito:'Cambio email: password errata',demo_azzerata:'Demo azzerata',azzeramento_rifiutato:'Azzeramento demo: password errata',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
+const EVENTI={accesso:'Accesso',accesso_fallito:'Tentativo di accesso fallito',accesso_bloccato:'Accesso bloccato',uscita:'Uscita',configurazione:'Prima configurazione',cambio_password:'Password cambiata',cambio_password_fallito:'Cambio password non riuscito',esportazione:'Copia dei dati scaricata',documento_caricato:'Documento caricato',password_recuperata:'Password recuperata con il codice',fattura_pdf:'Fattura in PDF',logo_cambiato:'Logo cambiato',logo_rimosso:'Logo rimosso',licenza_accettata:'Condizioni di licenza accettate',telegram_configurato:'Bot Telegram collegato',telegram_rimosso:'Bot Telegram scollegato',telegram_collegato:'Paziente collegato a Telegram',telegram_scollegato:'Paziente scollegato da Telegram',telegram_scollegato_dal_paziente:'Il paziente ha disattivato i promemoria',telegram_bloccato:'Il paziente ha bloccato il bot',telegram_chiave_non_valida:'Chiave del bot non più valida',promemoria_inviato:'Promemoria Telegram inviato',promemoria_inviato_a_mano:'Promemoria Telegram inviato a mano',promemoria_confermato:'Appuntamento confermato su Telegram',promemoria_disdetta:'Disdetta richiesta su Telegram',promemoria_errore:'Promemoria Telegram non inviato',email_accesso_cambiata:'Email di accesso cambiata',cambio_email_fallito:'Cambio email: password errata',demo_azzerata:'Demo azzerata',azzeramento_rifiutato:'Azzeramento demo: password errata',backup_scaricato:'Backup scaricato',backup_ripristinato:'Backup ripristinato',ripristino_rifiutato:'Ripristino rifiutato',recupero_fallito:'Recupero password fallito',recupero_bloccato:'Recupero password bloccato',recupero_codice_creato:'Nuovo codice di recupero',recupero_nuovo_fallito:'Nuovo codice: password errata',password_reimpostata_server:'Password reimpostata dal server',consenso_caricato:'Modulo di consenso caricato',documento_aperto:'Documento aperto',documento_scaricato:'Documento scaricato',documento_eliminato:'Documento eliminato',setup_codice_errato:'Codice di installazione errato'};
 async function loadAudit(){const box=$('#auditBox');if(!box)return;
   try{const r=await api('/api/log');box.innerHTML=`<table class="logtbl"><thead><tr><th>Quando</th><th>Evento</th><th>Indirizzo IP</th></tr></thead><tbody>${r.events.map(ev=>`<tr><td class="num">${new Date(ev.ts).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</td><td>${ev.event.includes('fallit')||ev.event.includes('bloccat')||ev.event.includes('errat')?'<span class="chip bad">'+esc(EVENTI[ev.event]||ev.event)+'</span>':esc(EVENTI[ev.event]||ev.event)}</td><td class="mono">${esc(ev.ip)}</td></tr>`).join('')}</tbody></table>`}
   catch(e){box.innerHTML='<p class="empty">Registro non disponibile.</p>'}}
@@ -1061,7 +1078,7 @@ async function uploadDocs(files){
     catch(e){toast(`${f.name}: ${e.message}`)}
   }
   const p=pat(S.pid);
-  if(ok&&p&&['informato','privacy','entrambi','online'].includes(docCat)&&!p.consensi[docCat]){p.consensi[docCat]=true;save();render();toast('Modulo caricato · voce segnata come firmata');return}
+  if(ok&&p&&['informato','privacy','entrambi','online','telegram'].includes(docCat)&&!p.consensi[docCat]){p.consensi[docCat]=true;save();render();toast('Modulo caricato · voce segnata come firmata');return}
   if(ok)toast(ok>1?`${ok} documenti caricati`:'Documento caricato');
   loadDocs();
 }
@@ -1184,16 +1201,138 @@ function cfAnalyze(raw,p,typing){const c=cfNorm(raw);if(!c)return{level:'',msg:'
   if(p.cognome&&cfPart(p.cognome)!==c.slice(0,3))probs.push('al cognome');
   if(p.nome&&cfPart(p.nome,true)!==c.slice(3,6))probs.push('al nome');
   if(p.nascita){const [Y,M,D]=p.nascita.split('-');if(Y.slice(2)!==yy||+M!==mm||+D!==dd)probs.push('alla data di nascita')}
+  if(p.sesso&&p.sesso!==sesso)probs.push('al sesso');
   const cat=n.slice(11,15);let luogo='';
-  const nt=sesso==='F'?'nata':'nato';if(cat[0]==='Z')luogo=`${nt} all’estero`;else if(COMUNI.list){const k=COMUNI.list.find(x=>x.cat===cat);if(k)luogo=`${nt} a ${k.n} (${k.sg})`}
+  if(p.lnasc){const ln=birthResolve(p.lnasc);if(ln&&ln.cod!==cat)probs.push('al luogo di nascita')}
+  const nt=sesso==='F'?'nata':'nato';if(cat[0]==='Z'){const st=ESTERI.find(x=>x.cod===cat);luogo=st?`${nt} in ${st.n}`:`${nt} all’estero`}else if(COMUNI.list){const k=COMUNI.list.find(x=>x.cat===cat);if(k)luogo=`${nt} ${/^[AEIOU]/i.test(k.n)?'ad':'a'} ${k.n} (${k.sg})`}
   const info=luogo||(sesso==='F'?'femmina':'maschio');
   if(probs.length)return{level:'warn',msg:`Il codice è valido ma non corrisponde ${probs.join(', ').replace(/, ([^,]*)$/,' e $1')}: controlla i dati (${info}).`};
   return{level:'ok',msg:`Codice fiscale corretto · ${info}`}}
 function cfShow(f){const box=f.querySelector('#pf-cfmsg');if(!box)return;const val=f.querySelector('[name=cf]').value;
-  const r=cfAnalyze(val,{nome:f.querySelector('[name=nome]').value,cognome:f.querySelector('[name=cognome]').value,nascita:f.querySelector('[name=nascita]').value},document.activeElement===f.querySelector('[name=cf]'));
+  const sx=f.querySelector('[name=sesso]'),lx=f.querySelector('[name=lnasc]');const r=cfAnalyze(val,{nome:f.querySelector('[name=nome]').value,cognome:f.querySelector('[name=cognome]').value,nascita:f.querySelector('[name=nascita]').value,sesso:sx?sx.value:'',lnasc:lx?lx.value:''},document.activeElement===f.querySelector('[name=cf]'));
   box.textContent=r.msg;box.className='span2 small cfmsg '+r.level;box.hidden=!r.msg}
 document.addEventListener('focusout',e=>{const t=e.target;if(t.form&&t.name==='cf'&&t.form.querySelector('#pf-cfmsg'))setTimeout(()=>cfShow(t.form),0)});
 document.addEventListener('input',e=>{const t=e.target;if(t.form&&['cf','nome','cognome','nascita'].includes(t.name)&&t.form.querySelector('#pf-cfmsg')){if(t.name==='cf'){const v=t.value.toUpperCase();if(v!==t.value){const pos=t.selectionStart;t.value=v;t.setSelectionRange(pos,pos)}}cfShow(t.form)}});
+
+
+/* ---------- luogo di nascita e calcolo del codice fiscale ---------- */
+// Codici degli Stati esteri più frequenti (codici "Z" usati nel codice fiscale). Per gli altri si può scrivere il codice, es. Z110.
+const ESTERI=[['Albania','Z100'],['Argentina','Z600'],['Austria','Z102'],['Bangladesh','Z249'],['Belgio','Z103'],['Brasile','Z602'],['Canada','Z401'],['Cina','Z210'],['Ecuador','Z605'],['Egitto','Z336'],['Filippine','Z216'],['Francia','Z110'],['Germania','Z112'],['Grecia','Z115'],['India','Z222'],['Marocco','Z330'],['Moldavia','Z140'],['Nigeria','Z335'],['Paesi Bassi','Z126'],['Pakistan','Z236'],['Perù','Z611'],['Polonia','Z127'],['Portogallo','Z128'],['Regno Unito','Z114'],['Romania','Z129'],['Russia','Z154'],['San Marino','Z130'],['Senegal','Z343'],['Spagna','Z131'],['Sri Lanka','Z209'],['Stati Uniti d’America','Z404'],['Svizzera','Z133'],['Tunisia','Z352'],['Ucraina','Z138'],['Venezuela','Z614']].map(([n,cod])=>({n,cod,k:normC(n)}));
+// "Roma (RM)" → comune; "Francia (estero)" → Stato; "Z110" → codice scritto a mano
+function birthResolve(v){v=String(v||'').trim();if(!v)return null;
+  if(/^Z\d{3}$/i.test(v)){const st=ESTERI.find(x=>x.cod===v.toUpperCase());return{label:st?`${st.n} (estero)`:`Estero · ${v.toUpperCase()}`,cod:v.toUpperCase(),estero:true}}
+  const m=v.match(/^(.*?)\s*\((estero|[A-Za-z]{2})\)$/);const name=normC(m?m[1]:v),tag=m?m[2].toLowerCase():'';
+  if(tag!=='estero'&&COMUNI.list){const c=COMUNI.list.filter(x=>x.k===name&&x.cat&&(!tag||x.sg.toLowerCase()===tag));if(c.length===1)return{label:`${c[0].n} (${c[0].sg})`,cod:c[0].cat}}
+  if(!tag||tag==='estero'){const st=ESTERI.find(x=>x.k===name);if(st)return{label:`${st.n} (estero)`,cod:st.cod,estero:true}}
+  return null}
+function birthFill(q){const dl=$('#dlNascita');if(!dl)return;const k=normC(q.replace(/\s*\(.*$/,''));if(k.length<2){dl.innerHTML='';return}
+  const c=(COMUNI.list||[]).filter(x=>x.cat&&x.k.startsWith(k)).slice(0,25).map(x=>`${x.n} (${x.sg})`);
+  const st=ESTERI.filter(x=>x.k.startsWith(k)).map(x=>`${x.n} (estero)`);
+  dl.innerHTML=st.concat(c).slice(0,30).map(v=>`<option value="${esc(v)}">`).join('')}
+function cfCalcForm(f){const g=n=>f.querySelector(`[name=${n}]`);
+  const nome=g('nome').value.trim(),cognome=g('cognome').value.trim(),nascita=g('nascita').value,sesso=g('sesso').value;
+  const miss=[!cognome&&'cognome',!nome&&'nome',!nascita&&'data di nascita',!sesso&&'sesso',!g('lnasc').value.trim()&&'luogo di nascita'].filter(Boolean);
+  if(miss.length){toast('Per calcolarlo servono: '+miss.join(', '));return}
+  const ln=birthResolve(g('lnasc').value);
+  if(!ln){const omo=(COMUNI.list||[]).filter(x=>x.k===normC(g('lnasc').value.replace(/\s*\(.*$/,'')));if(omo.length>1){toast(`Ci sono più comuni chiamati ${omo[0].n}: scegli quello giusto dall’elenco (${omo.map(x=>x.sg).join(', ')})`);return}
+    toast(COMUNI.list&&COMUNI.list.length?'Luogo di nascita non riconosciuto: sceglilo dall’elenco, o per uno Stato estero scrivi il suo codice (es. Z110)':'Elenco dei comuni non disponibile sul server: scrivi il codice fiscale a mano');return}
+  g('lnasc').value=ln.label;const cf=cfBuild(nome,cognome,nascita,sesso,ln.cod),old=cfNorm(g('cf').value);
+  g('cf').value=cf;cfShow(f);
+  toast(old&&old!==cf?'Codice ricalcolato: era diverso da quello scritto. Confrontalo con la tessera sanitaria':old===cf?'Il codice scritto coincide con quello calcolato':'Codice calcolato: confrontalo sempre con la tessera sanitaria')}
+// dal codice fiscale completo e valido si ricavano sesso e luogo di nascita, se mancano
+function cfBackfill(f){const g=n=>f.querySelector(`[name=${n}]`);const c=cfNorm(g('cf').value);if(c.length!==16||cfAnalyze(c,{}).level!=='ok')return;
+  const n=cfDigits(c,[6,7,9,10,12,13,14]);if(!g('sesso').value)g('sesso').value=+n.slice(9,11)>40?'F':'M';
+  if(!g('lnasc').value.trim()){const cat=n.slice(11,15);let lab='';if(cat[0]==='Z'){const st=ESTERI.find(x=>x.cod===cat);lab=st?`${st.n} (estero)`:`Estero · ${cat}`}else if(COMUNI.list){const k=COMUNI.list.find(x=>x.cat===cat);if(k)lab=`${k.n} (${k.sg})`}if(lab)g('lnasc').value=lab}}
+document.addEventListener('focusin',e=>{if(e.target.name==='lnasc')loadComuni()});
+document.addEventListener('input',e=>{if(e.target.id==='tgText'){const pv=$('#tgPrev');if(pv)pv.innerHTML=esc(tgSample(e.target.value)).replace(/\n/g,'<br>')}});
+document.addEventListener('input',e=>{const t=e.target;if(!t.form)return;
+  if(t.name==='lnasc')loadComuni().then(()=>birthFill(t.value));
+  if(t.form.querySelector('#pf-cfmsg')&&['sesso','lnasc'].includes(t.name))cfShow(t.form);
+  if(t.name==='cf'&&t.form.querySelector('#pf-sesso'))loadComuni().then(()=>{cfBackfill(t.form);cfShow(t.form)})});
+document.addEventListener('change',e=>{const t=e.target;if(t.form&&t.form.querySelector('#pf-cfmsg')&&['sesso','lnasc'].includes(t.name))cfShow(t.form)});
+
+/* ---------- QR code (byte, correzione M, versioni 1–6): per collegare Telegram dal telefono del paziente ---------- */
+const QR=(()=>{
+  const EXP=new Array(512),LOG=new Array(256);for(let i=0,x=1;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=0x11d}for(let i=255;i<512;i++)EXP[i]=EXP[i-255];
+  const mul=(a,b)=>a&&b?EXP[LOG[a]+LOG[b]]:0;
+  const gen=n=>{let g=[1];for(let i=0;i<n;i++){const h=new Array(g.length+1).fill(0);g.forEach((c,j)=>{h[j]^=c;h[j+1]^=mul(c,EXP[i])});g=h}return g};
+  const rem=(data,n)=>{const g=gen(n),r=new Array(n).fill(0);for(const d of data){const f=d^r.shift();r.push(0);if(f)for(let j=0;j<n;j++)r[j]^=mul(g[j+1],f)}return r};
+  const VER={1:[1,16,10],2:[1,28,16],3:[1,44,26],4:[2,32,18],5:[2,43,24],6:[4,27,16]},AL={2:18,3:22,4:26,5:30,6:34};
+  const MASK=[(r,c)=>(r+c)%2==0,r=>r%2==0,(r,c)=>c%3==0,(r,c)=>(r+c)%3==0,(r,c)=>(Math.floor(r/2)+Math.floor(c/3))%2==0,(r,c)=>(r*c)%2+(r*c)%3==0,(r,c)=>((r*c)%2+(r*c)%3)%2==0,(r,c)=>((r+c)%2+(r*c)%3)%2==0];
+  function encode(text){
+    const bytes=[...new TextEncoder().encode(text)];let v=1;
+    while(v<=6&&12+8*bytes.length>VER[v][0]*VER[v][1]*8)v++;
+    if(v>6)throw new Error('Testo troppo lungo per il QR');
+    const [nb,dc,ec]=VER[v],cap=nb*dc*8,bits=[];const put=(val,n)=>{for(let i=n-1;i>=0;i--)bits.push((val>>>i)&1)};
+    put(4,4);put(bytes.length,8);bytes.forEach(b=>put(b,8));put(0,Math.min(4,cap-bits.length));while(bits.length%8)bits.push(0);
+    const data=[];for(let i=0;i<bits.length;i+=8)data.push(parseInt(bits.slice(i,i+8).join(''),2));for(let p=0xEC;data.length<nb*dc;p^=0xEC^0x11)data.push(p);
+    const blocks=[...Array(nb)].map((_,b)=>data.slice(b*dc,(b+1)*dc)),ecs=blocks.map(b=>rem(b,ec)),cw=[];
+    for(let i=0;i<dc;i++)blocks.forEach(b=>cw.push(b[i]));for(let i=0;i<ec;i++)ecs.forEach(e=>cw.push(e[i]));
+    const N=17+4*v,M=[...Array(N)].map(()=>new Array(N).fill(0)),F=[...Array(N)].map(()=>new Array(N).fill(false));
+    const set=(r,c,d)=>{if(r>=0&&c>=0&&r<N&&c<N){M[r][c]=d?1:0;F[r][c]=true}};
+    const finder=(r0,c0)=>{for(let r=-1;r<=7;r++)for(let c=-1;c<=7;c++){const k=Math.max(Math.abs(r-3),Math.abs(c-3));set(r0+r,c0+c,k!==2&&k!==4)}};
+    finder(0,0);finder(0,N-7);finder(N-7,0);
+    for(let i=8;i<N-8;i++){set(6,i,i%2==0);set(i,6,i%2==0)}
+    if(AL[v]){const a=AL[v];for(let r=-2;r<=2;r++)for(let c=-2;c<=2;c++)set(a+r,a+c,Math.max(Math.abs(r),Math.abs(c))!==1)}
+    const fmtCells=[];for(let i=0;i<=8;i++)if(i!==6)fmtCells.push([8,i],[i,8]);for(let i=0;i<8;i++){fmtCells.push([8,N-1-i],[N-1-i,8])}fmtCells.forEach(([r,c])=>set(r,c,0));set(N-8,8,1);
+    const all=[];cw.forEach(b=>{for(let i=7;i>=0;i--)all.push((b>>>i)&1)});
+    const order=[];for(let c=N-1,up=true;c>0;c-=2,up=!up){if(c===6)c--;for(let k=0;k<N;k++){const r=up?N-1-k:k;for(const cc of [c,c-1])if(!F[r][cc])order.push([r,cc])}}
+    const fmt=m=>{let d=m<<10;for(let i=14;i>=10;i--)if(d&(1<<i))d^=0x537<<(i-10);return ((m<<10)|d)^0x5412};
+    const build=m=>{const X=M.map(r=>r.slice());order.forEach(([r,c],i)=>{X[r][c]=(all[i]||0)^(MASK[m](r,c)?1:0)});
+      const f=fmt(m),b=i=>(f>>>i)&1;
+      for(let i=0;i<=5;i++)X[i][8]=b(i);X[7][8]=b(6);X[8][8]=b(7);X[8][7]=b(8);for(let i=9;i<15;i++)X[8][14-i]=b(i);
+      for(let i=0;i<8;i++)X[8][N-1-i]=b(i);for(let i=8;i<15;i++)X[N-15+i][8]=b(i);X[N-8][8]=1;return X};
+    const score=X=>{let s=0,dark=0;const line=get=>{let run=1;for(let i=1;i<N;i++){if(get(i)===get(i-1)){run++;if(run===5)s+=3;else if(run>5)s++}else run=1}
+        const seq=[...Array(N)].map((_,i)=>get(i)).join('');for(const p of ['10111010000','00001011101']){let k=seq.indexOf(p);while(k>=0){s+=40;k=seq.indexOf(p,k+1)}}};
+      for(let r=0;r<N;r++){line(i=>X[r][i]);line(i=>X[i][r])}
+      for(let r=0;r<N-1;r++)for(let c=0;c<N-1;c++){const x=X[r][c];if(x===X[r][c+1]&&x===X[r+1][c]&&x===X[r+1][c+1])s+=3}
+      X.forEach(r=>r.forEach(x=>dark+=x));s+=Math.floor(Math.abs(dark*20-N*N*10)/(N*N))*10;return s};
+    let best=null,bs=1e9;for(let m=0;m<8;m++){const X=build(m),sc=score(X);if(sc<bs){bs=sc;best=X}}
+    return best}
+  function svg(text,px=6){const X=encode(text),N=X.length,q=4,W=(N+2*q)*px;let d='';X.forEach((row,r)=>row.forEach((x,c)=>{if(x)d+=`M${(c+q)*px} ${(r+q)*px}h${px}v${px}h-${px}z`}));
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}" role="img" aria-label="Codice QR"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#000"/></svg>`}
+  return {encode,svg};
+})();
+
+/* ---------- promemoria su Telegram ---------- */
+let TG={configured:false,bot:null,links:{},sent:{},defaultText:''},TGsig='';
+async function loadTG(rerender){try{const t=await api('/api/telegram');const sig=JSON.stringify(t);TG=t;
+  if(rerender&&S.logged&&sig!==TGsig&&$('#modal').hidden&&!/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||''))render();TGsig=sig}catch(e){}}
+const tgCfg=()=>Object.assign({enabled:false,time:'18:00',text:''},DB.me.tg||{});
+function tgLabel(a){const r=TG.sent&&TG.sent[a.id];if(!r)return '';
+  return r.status==='confermato'?'<span class="chip good" title="Risposta ricevuta su Telegram">Confermato</span>':r.status==='disdetta'?'<span class="chip bad" title="Risposta ricevuta su Telegram">Chiede di disdire</span>':r.status==='errore'?`<span class="chip warn" title="${esc(r.error||'')}">Promemoria non inviato</span>`:'<span class="chip" title="Promemoria inviato su Telegram">Promemoria inviato</span>'}
+const tgCanSend=a=>{const p=pat(a.patientId);return TG.configured&&p&&p.consensi.telegram&&TG.links[p.id]&&a.status==='prenotato'&&a.date>=T};
+function tgSample(text){const nx=DB.appts.filter(a=>a.date>=T&&a.status==='prenotato').sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start))[0];
+  const p=nx?pat(nx.patientId):{nome:'Mario',cognome:'Rossi'},st=nx?studio(nx.studioId):activeStudi()[0]||{nome:'Studio',indirizzo:''},d=nx?nx.date:T;
+  const v={nome:p.nome,paziente:full(p),giorno:fmtLong(d),data:fmtD(d),ora:nx?nx.start:'15:00',studio:st.nome,luogo:nx&&nx.online?'seduta online':[st.nome,st.indirizzo].filter(Boolean).join(', '),professionista:meName(),link:'https://meet.google.com/…'};
+  return String(text||TG.defaultText).replace(/\{(\w+)\}/g,(m,k)=>k in v?v[k]:m)}
+function vTelegram(){const c=tgCfg();
+  if(!TG.configured)return `<section class="panel"><header><h2>Promemoria su Telegram</h2><span class="chip">Non attivo</span></header><div class="body" style="display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0">Il giorno prima dell’appuntamento PsicoLogo manda da solo un promemoria su Telegram ai pazienti che hanno dato il consenso e si sono collegati, con i pulsanti <b>Confermo</b> e <b>Devo disdire</b>. È gratuito.</p>
+    <ol class="small" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px"><li>Su Telegram apri <b>@BotFather</b> e scrivi <span class="mono">/newbot</span>.</li><li>Scegli un nome visibile (es. <i>${esc(meName())} – Promemoria</i>) e un nome utente che finisca con <span class="mono">bot</span>.</li><li>BotFather risponde con una <b>chiave</b>, una riga come <span class="mono">123456789:AAH…</span>: copiala e incollala qui sotto.</li></ol>
+    <form data-form="tgtoken" class="row" style="flex-wrap:nowrap;gap:8px"><input type="password" name="token" id="tgToken" class="field" style="flex:1;min-width:0" placeholder="Chiave del bot" autocomplete="off" spellcheck="false" aria-label="Chiave del bot"><button class="btn primary">Collega il bot</button></form>
+    <p class="muted small" style="margin:0">La chiave resta cifrata sul server e non viene più mostrata. Non scriverla in email o in chat.</p></div></section>`;
+  const n=Object.keys(TG.links||{}).length;
+  return `<section class="panel"><header><h2>Promemoria su Telegram</h2>${c.enabled?'<span class="chip good">Attivi</span>':'<span class="chip warn">In pausa</span>'}</header><form class="body fgrid" data-form="tgcfg">
+    <p class="span2" style="margin:0">Bot collegato: <a href="https://t.me/${esc(TG.bot)}" target="_blank" rel="noopener">@${esc(TG.bot)}</a> · ${n} ${n===1?'paziente collegato':'pazienti collegati'}. I pazienti si collegano dalla loro scheda, in <b>Consensi e privacy</b>.</p>
+    <label class="check span2" style="border:0;padding:0"><input type="checkbox" name="enabled" id="tgEnabled" ${c.enabled?'checked':''}><span><b>Invia i promemoria automaticamente</b><br><span class="muted small">Il giorno prima dell’appuntamento, solo ai pazienti con il consenso e Telegram collegato.</span></span></label>
+    <label>Orario di invio, il giorno prima<input type="time" name="time" id="tgTime" value="${esc(c.time)}" step="900"></label><span></span>
+    <label class="span2">Testo del promemoria<textarea name="text" id="tgText" rows="4" maxlength="800">${esc(c.text||TG.defaultText||'')}</textarea></label>
+    <p class="span2 muted small" style="margin:0">Puoi usare {nome} {paziente} {giorno} {data} {ora} {studio} {luogo} {professionista} {link}. Per le sedute online il link viene aggiunto da solo. Indica solo data, ora e luogo, senza riferimenti alla terapia.</p>
+    <div class="span2 tgprev"><div class="eyebrow">Anteprima</div><div id="tgPrev">${esc(tgSample(c.text)).replace(/\n/g,'<br>')}</div><div class="tgbtns"><span>Confermo</span><span>Devo disdire</span></div></div>
+    <div class="span2 row" style="justify-content:space-between"><button type="button" class="btn danger small" data-act="tgRemove">Scollega il bot</button><button class="btn primary">Salva</button></div></form></section>`}
+function tgConsBlock(p){if(!TG.configured)return `<p class="muted small" style="margin:4px 0 0">Per usare i promemoria su Telegram collega prima il bot in Profilo → Promemoria su Telegram.</p>`;
+  const l=TG.links[p.id];
+  return `<div class="tglink row">${l?`<span class="chip good">Telegram collegato</span><span class="muted small">dal ${new Date(l).toLocaleDateString('it-IT')}</span><button type="button" class="linkbtn small" data-act="tgUnlink">Scollega</button>`
+    :`<span class="chip">Telegram non collegato</span><button type="button" class="btn small" data-act="tgLink" ${p.consensi.telegram?'':'disabled title="Serve prima il consenso"'}>Collega Telegram</button>${p.consensi.telegram?'':'<span class="muted small">Prima spunta il consenso.</span>'}`}</div>`}
+async function tgLinkModal(p){let r;try{r=await api('/api/telegram/link',{method:'POST',body:{patientId:p.id}})}catch(e){toast(e.message);return}
+  const msg=`Per ricevere i promemoria degli appuntamenti con ${meName()} su Telegram apri questo link e premi Avvia: ${r.url}`;
+  modal(`Collega Telegram · ${esc(full(p))}`,`<div class="tgqr">${QR.svg(r.url,5)}</div>
+    <ol class="small" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px"><li>Il paziente${ageOf(p.nascita)<18?' (o il genitore)':''} inquadra il codice con la fotocamera del telefono.</li><li>Si apre Telegram sul bot <b>@${esc(r.bot)}</b>: preme <b>Avvia</b>.</li><li>Arriva il messaggio “Collegamento riuscito”: fatto.</li></ol>
+    <label class="fl">Oppure mandagli il link<input id="tgUrl" readonly value="${esc(r.url)}"></label>
+    <div class="row"><button type="button" class="btn small" data-act="tgCopy">Copia link</button><a class="btn small" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Invia su WhatsApp</a><a class="btn small" href="mailto:${encodeURIComponent(p.email||'')}?subject=${encodeURIComponent('Promemoria degli appuntamenti')}&body=${encodeURIComponent(msg)}">Invia per email</a></div>
+    <p class="muted small" style="margin:0">Il link è personale, vale 7 giorni e funziona una volta sola.</p>`,
+    `<button type="button" class="btn" data-act="close">Chiudi</button><button type="button" class="btn primary" data-act="tgCheck">Controlla il collegamento</button>`)}
 
 /* ---------- fatture in PDF ---------- */
 async function invoicePdf(id,mode){
@@ -1316,7 +1455,7 @@ function apptForm(pre={}){
 function apptDetail(id){
   const a=DB.appts.find(x=>x.id===id),p=pat(a.patientId);
   const note=DB.notes.find(n=>n.apptId===a.id);
-  modal(esc(full(p)),`<dl class="kv"><dt>Quando</dt><dd>${fmtLong(a.date)}, ${a.start}–${hhmm(toMin(a.start)+a.dur)}</dd><dt>Tipo</dt><dd>${a.type}</dd><dt>Studio</dt><dd>${esc(studio(a.studioId).nome)}</dd><dt>Modalità</dt><dd>${a.online?`Online (videochiamata)${apptLink(a)?` · <a href="${esc(apptLink(a))}" target="_blank" rel="noopener">Apri la videochiamata</a>`:' · <span class="muted">nessun link indicato</span>'}`:'In studio'}</dd><dt>Tariffa</dt><dd>${euro(priceOf(a,DB.me))}</dd>${a.invoiceId?`<dt>Fattura</dt><dd class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</dd>`:''}</dl>
+  modal(esc(full(p)),`<dl class="kv"><dt>Quando</dt><dd>${fmtLong(a.date)}, ${a.start}–${hhmm(toMin(a.start)+a.dur)}</dd><dt>Tipo</dt><dd>${a.type}</dd><dt>Studio</dt><dd>${esc(studio(a.studioId).nome)}</dd><dt>Modalità</dt><dd>${a.online?`Online (videochiamata)${apptLink(a)?` · <a href="${esc(apptLink(a))}" target="_blank" rel="noopener">Apri la videochiamata</a>`:' · <span class="muted">nessun link indicato</span>'}`:'In studio'}</dd><dt>Tariffa</dt><dd>${euro(priceOf(a,DB.me))}</dd>${TG.configured&&p.consensi.telegram?`<dt>Telegram</dt><dd>${tgLabel(a)||'<span class="muted">Promemoria non ancora inviato</span>'}${tgCanSend(a)?` <button type="button" class="linkbtn" data-act="tgSend" data-id="${a.id}">Invia ${TG.sent[a.id]?'di nuovo':'ora'}</button>`:TG.links[p.id]?'':' <span class="muted small">· il paziente non ha collegato Telegram</span>'}</dd>`:''}${a.invoiceId?`<dt>Fattura</dt><dd class="mono">${DB.invoices.find(i=>i.id===a.invoiceId).num}</dd>`:''}</dl>
     <label class="fl">Stato<select name="status" id="dStatus" ${a.invoiceId?'disabled':''}>${Object.entries(STATI).map(([k,[l]])=>opt(k,l,a.status)).join('')}</select></label>
     ${note?`<div><div class="eyebrow">Nota di seduta</div><p style="margin:4px 0 0">${esc(note.text)}</p></div>`:''}`,
     `${!a.invoiceId?`<button type="button" class="btn danger" data-act="delAppt" data-id="${a.id}">Elimina</button>`:''}${!a.invoiceId?`<button type="button" class="btn" data-act="editAppt" data-id="${a.id}">Modifica</button>`:''}<button type="button" class="btn" data-act="openPt" data-id="${p.id}">Scheda paziente</button>${a.status==='svolto'&&!note?`<button type="button" class="btn" data-act="note" data-id="${a.id}">Scrivi nota</button>`:''}<button class="btn primary">Salva</button>`,
@@ -1386,7 +1525,10 @@ function patientForm(p){
   const fld=(n,l,v,type='text',req='')=>`<label>${l}<input name="${n}" id="pf-${n}" type="${type}" value="${esc(v)}" ${req}></label>`;
   modal(p?'Modifica paziente':'Nuovo paziente',`<div class="fgrid">
     ${fld('nome','Nome',x.nome,'text','required')}${fld('cognome','Cognome',x.cognome,'text','required')}
-    ${fld('nascita','Data di nascita',x.nascita,'date','required')}${fld('cf','Codice fiscale',x.cf,'text','maxlength="16" autocapitalize="characters" spellcheck="false" autocomplete="off"')}
+    ${fld('nascita','Data di nascita',x.nascita,'date','required')}
+    <label>Sesso<select name="sesso" id="pf-sesso">${opt('','—',x.sesso||'')}${opt('F','Femmina',x.sesso||'')}${opt('M','Maschio',x.sesso||'')}</select></label>
+    <label class="span2">Comune di nascita, o Stato se nato/a all’estero<input name="lnasc" id="pf-lnasc" value="${esc(x.lnasc||'')}" list="dlNascita" autocomplete="off" placeholder="Es. Roma (RM) oppure Francia (estero)"></label>
+    <label class="span2">Codice fiscale<span class="row" style="gap:6px;flex-wrap:nowrap"><input name="cf" id="pf-cf" value="${esc(x.cf)}" maxlength="16" autocapitalize="characters" spellcheck="false" autocomplete="off" style="flex:1;font-family:var(--f-mono);letter-spacing:.04em"><button type="button" class="btn" data-act="cfCalc">Calcola</button></span></label>
     <p class="span2 small cfmsg" id="pf-cfmsg" role="status" hidden></p>
     <label class="span2">Studio abituale<select name="studioId" id="pf-studio">${activeStudi().map(r=>opt(r.id,r.nome,x.studioId)).join('')}</select></label>
     ${addrFields('pf',x,'Indirizzo di residenza')}
@@ -1401,7 +1543,7 @@ function patientForm(p){
     if(addrBad(f)){toast(addrBad(f));return false}
     {const r=cfAnalyze(f.cf,f);if(r.level==='bad'){toast(r.msg);$('#pf-cf').focus();return false}}
     const tutori=[0,1].filter(i=>f['t'+i+'nome'].trim()).map(i=>({nome:f['t'+i+'nome'].trim(),rel:t(i).rel,tel:f['t'+i+'tel']}));
-    const data={...addrData(f),nome:f.nome.trim(),cognome:f.cognome.trim(),nascita:f.nascita,cf:cfNorm(f.cf),studioId:f.studioId,tel:f.tel,email:f.email,invio:f.invio,tutori};
+    const ln=birthResolve(f.lnasc);const data={...addrData(f),sesso:f.sesso||'',lnasc:ln?ln.label:(f.lnasc||'').trim(),lnascCod:ln?ln.cod:'',nome:f.nome.trim(),cognome:f.cognome.trim(),nascita:f.nascita,cf:cfNorm(f.cf),studioId:f.studioId,tel:f.tel,email:f.email,invio:f.invio,tutori};
     if(p){Object.assign(p,data);toast('Dati aggiornati')}
     else{const np={id:uid(),...data,motivo:f.motivo,anamnesi:'',obiettivi:[],consensi:{informato:false,privacy:false,entrambi:false,ts:'ok'}};DB.patients.push(np);S.view='paziente';S.pid=np.id;S.ptab='consensi';toast('Paziente creato · raccogli i consensi')}
   });
@@ -1572,6 +1714,13 @@ document.addEventListener('click',e=>{
       f=>{const m=$('#elMsg'),bad=t=>{m.textContent=t;m.hidden=false;return false};const e=(f.email||'').trim().toLowerCase();
         if(!isEmail(e))return bad('Inserisci un indirizzo email valido.');if(!f.pw)return bad('Inserisci la password attuale.');
         (async()=>{try{const r=await api('/api/username',{method:'POST',body:{email:e,password:f.pw}});USERNAME=r.username;close();render();toast('Email di accesso aggiornata')}catch(x){bad(x.message)}})();return false});break;
+    case 'cfCalc':loadComuni().then(()=>cfCalcForm(el.form||$('#mform')));break;
+    case 'tgRemove':if(!confirm('Scollegare il bot? I pazienti collegati dovranno ricollegarsi.'))break;(async()=>{try{await api('/api/telegram/token',{method:'DELETE'});DB.me.tg={...tgCfg(),enabled:false};save();await loadTG();render();toast('Bot scollegato')}catch(e){toast(e.message)}})();break;
+    case 'tgLink':tgLinkModal(pat(S.pid));break;
+    case 'tgUnlink':(async()=>{try{await api('/api/telegram/link/'+encodeURIComponent(S.pid),{method:'DELETE'});await loadTG();render();toast('Telegram scollegato')}catch(e){toast(e.message)}})();break;
+    case 'tgCopy':{const i=$('#tgUrl');i.select();(navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).then(()=>toast('Link copiato'),()=>{document.execCommand('copy');toast('Link copiato')});break}
+    case 'tgCheck':(async()=>{await loadTG();if(TG.links[S.pid]){close();render();toast('Telegram collegato')}else toast('Non ancora collegato: il paziente deve premere Avvia nel bot')})();break;
+    case 'tgSend':(async()=>{if(dirty||saving){clearTimeout(saveTimer);await flush()}try{await api('/api/telegram/send',{method:'POST',body:{apptId:id}});await loadTG();toast('Promemoria inviato');apptDetail(id)}catch(e){toast(e.message)}})();break;
     case 'logoPick':$('#logoUp').click();break;
     case 'logoReset':removeLogo();break;
     case 'pdfOpen':invoicePdf(id,'open');break;
@@ -1634,6 +1783,10 @@ document.addEventListener('submit',e=>{
         if(!d.sample){S.view='studi';render()}
         showRecoveryCode(r.recoveryCode,'Il tuo gestionale è pronto. Ecco il <b>codice di recupero</b>: se dimentichi la password, ti permette di sceglierne una nuova.')}
       catch(e){fail(e.status?e.message:'Server non raggiungibile.')}finally{btn.disabled=false}})();return}
+  if(f.dataset.form==='tgtoken'){const t=(f.token.value||'').trim();if(!t){toast('Incolla la chiave che ti ha dato @BotFather');return}const b=f.querySelector('button');b.disabled=true;
+    (async()=>{try{const r=await api('/api/telegram/token',{method:'POST',body:{token:t}});f.reset();await loadTG();DB.me.tg={...tgCfg(),enabled:true};save();render();toast(`Bot @${r.bot} collegato · promemoria attivi`)}catch(e){toast(e.message)}finally{b.disabled=false}})();return}
+  if(f.dataset.form==='tgcfg'){const d=Object.fromEntries(new FormData(f));const txt=(d.text||'').trim();
+    DB.me.tg={enabled:!!d.enabled,time:/^\d{2}:\d{2}$/.test(d.time)?d.time:'18:00',text:txt===TG.defaultText?'':txt.slice(0,800)};save();render();toast(DB.me.tg.enabled?`Promemoria attivi: partono il giorno prima alle ${DB.me.tg.time}`:'Promemoria in pausa');return}
   if(f.dataset.form==='pw'){const d=Object.fromEntries(new FormData(f));
     if(d.n1.length<10){toast('La nuova password deve avere almeno 10 caratteri');return}
     if(d.n1!==d.n2){toast('Le due password non coincidono');return}

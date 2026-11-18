@@ -6,7 +6,9 @@ const crypto = require('node:crypto');
 
 const DAY_NAMES = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
 const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
-const DEFAULT_TEXT = 'Promemoria per {nome}: appuntamento {giorno} alle ore {ora}, {luogo}.\n\n{professionista}';
+const DEFAULT_TEXT = 'Promemoria per {nome}: appuntamento {giorno} alle ore {ora}, {luogo}.\nPuoi confermare o avvisare se non puoi venire con i pulsanti qui sotto.\n\n{professionista}';
+const DEFAULT_TEXT2 = 'Ti ricordo che tra poco, alle ore {ora}, hai l’appuntamento: {luogo}.\n\n{professionista}';
+const OWNER = '__owner';
 const TOKEN_RE = /^\d{5,15}:[A-Za-z0-9_-]{30,60}$/;
 const CODE_DAYS = 7;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -20,6 +22,18 @@ const addDay = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); const
 const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : 18 * 60; };
 const dayLabel = iso => { const [y, m, d] = iso.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, d)); return `${DAY_NAMES[t.getUTCDay()]} ${d} ${MONTHS[m - 1]}`; };
 const fmtDate = iso => iso.split('-').reverse().join('/');
+// data e ora italiane (es. 2026-11-19 10:00) → istante assoluto, con ora legale/solare corretta
+function romeEpoch(date, hhmm) {
+  const [y, m, d] = date.split('-').map(Number), [h, mi] = String(hhmm || '00:00').split(':').map(Number);
+  const want = Date.UTC(y, m - 1, d, h, mi);
+  let t = want;
+  for (let i = 0; i < 3; i++) {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t));
+    const g = k => Number(p.find(x => x.type === k).value);
+    t += want - Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
+  }
+  return t;
+}
 
 module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, apiBase }) {
   const BASE = (apiBase || 'https://api.telegram.org').replace(/\/$/, '');
@@ -27,7 +41,9 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
     CREATE TABLE IF NOT EXISTS tg_links (patient_id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, linked INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS tg_codes (code TEXT PRIMARY KEY, patient_id TEXT NOT NULL, expires INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS tg_sent (appt_id TEXT PRIMARY KEY, patient_id TEXT NOT NULL, chat_id TEXT NOT NULL, message_id INTEGER, sent INTEGER NOT NULL, status TEXT NOT NULL, answered INTEGER, error TEXT);
+    CREATE TABLE IF NOT EXISTS tg_second (appt_id TEXT PRIMARY KEY, slot TEXT NOT NULL, sent INTEGER NOT NULL, error TEXT);
   `);
+  if (!db.prepare('PRAGMA table_info(tg_sent)').all().some(c => c.name === 'slot')) db.exec("ALTER TABLE tg_sent ADD COLUMN slot TEXT NOT NULL DEFAULT ''");
   const st = {
     meta: db.prepare('SELECT value FROM meta WHERE key = ?'),
     setMeta: db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
@@ -42,8 +58,10 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
     delCodesFor: db.prepare('DELETE FROM tg_codes WHERE patient_id = ?'),
     purgeCodes: db.prepare('DELETE FROM tg_codes WHERE expires < ?'),
     sent: db.prepare('SELECT * FROM tg_sent WHERE appt_id = ?'),
-    sentRecent: db.prepare('SELECT appt_id, status, sent, answered, error FROM tg_sent WHERE sent > ?'),
-    upsertSent: db.prepare('INSERT INTO tg_sent (appt_id, patient_id, chat_id, message_id, sent, status, answered, error) VALUES (?, ?, ?, ?, ?, ?, NULL, ?) ON CONFLICT(appt_id) DO UPDATE SET patient_id = excluded.patient_id, chat_id = excluded.chat_id, message_id = excluded.message_id, sent = excluded.sent, status = excluded.status, answered = NULL, error = excluded.error'),
+    sentRecent: db.prepare('SELECT s.appt_id, s.status, s.sent, s.answered, s.error, s.slot, t.sent AS second FROM tg_sent s LEFT JOIN tg_second t ON t.appt_id = s.appt_id AND t.slot = s.slot WHERE s.sent > ?'),
+    upsertSent: db.prepare('INSERT INTO tg_sent (appt_id, patient_id, chat_id, message_id, sent, status, answered, error, slot) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(appt_id) DO UPDATE SET patient_id = excluded.patient_id, chat_id = excluded.chat_id, message_id = excluded.message_id, sent = excluded.sent, status = excluded.status, answered = NULL, error = excluded.error, slot = excluded.slot'),
+    second: db.prepare('SELECT * FROM tg_second WHERE appt_id = ?'),
+    upsertSecond: db.prepare('INSERT INTO tg_second (appt_id, slot, sent, error) VALUES (?, ?, ?, ?) ON CONFLICT(appt_id) DO UPDATE SET slot = excluded.slot, sent = excluded.sent, error = excluded.error'),
     answer: db.prepare('UPDATE tg_sent SET status = ?, answered = ? WHERE appt_id = ?'),
   };
   const meta = k => { const r = st.meta.get(k); return r ? r.value : null; };
@@ -61,7 +79,7 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
   }
 
   /* ---------- testo del promemoria ---------- */
-  function render(data, a) {
+  function render(data, a, kind = 1) {
     const me = data.me || {}, cfg = me.tg || {};
     const p = (data.patients || []).find(x => x.id === a.patientId) || {};
     const s = (data.studi || []).find(x => x.id === a.studioId) || {};
@@ -72,30 +90,47 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
       studio: s.nome || '', luogo: a.online ? 'seduta online' : [s.nome, s.indirizzo].filter(Boolean).join(', '),
       professionista: [me.titolo, me.nome, me.cognome].filter(Boolean).join(' '), link,
     };
-    let t = String(cfg.text || DEFAULT_TEXT).slice(0, 1000).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
-    if (link && !/\{link\}/.test(cfg.text || '')) t += `\n\nLink per la seduta: ${link}`;
+    const tpl = kind === 2 ? (cfg.text2 || DEFAULT_TEXT2) : (cfg.text || DEFAULT_TEXT);
+    let t = String(tpl).slice(0, 1000).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+    if (link && !/\{link\}/.test(tpl)) t += `\n\nLink per la seduta: ${link}`;
     return t.slice(0, 3500);
   }
 
   /* ---------- invio di un promemoria ---------- */
-  async function sendReminder(data, a, manual) {
+  const slotOf = a => a.date + ' ' + a.start;
+  function eligible(data, a) {
     const p = (data.patients || []).find(x => x.id === a.patientId);
-    if (!p) return { ok: false, error: 'Paziente non trovato' };
-    if (!(p.consensi && p.consensi.telegram)) return { ok: false, error: 'Manca il consenso del paziente ai promemoria su Telegram' };
+    if (!p) return { error: 'Paziente non trovato' };
+    if (!(p.consensi && p.consensi.telegram)) return { error: 'Manca il consenso del paziente ai promemoria su Telegram' };
     const l = st.link.get(p.id);
-    if (!l) return { ok: false, error: 'Il paziente non ha ancora collegato Telegram' };
-    const keyboard = { inline_keyboard: [[{ text: 'Confermo', callback_data: 'c:' + a.id }, { text: 'Devo disdire', callback_data: 'd:' + a.id }]] };
+    if (!l) return { error: 'Il paziente non ha ancora collegato Telegram' };
+    return { p, l };
+  }
+  // kind 1 = primo promemoria con i pulsanti; kind 2 = secondo promemoria, solo informativo
+  async function sendReminder(data, a, manual, kind = 1) {
+    const { p, l, error } = eligible(data, a);
+    if (error) return { ok: false, error };
+    const params = { chat_id: l.chat_id, text: render(data, a, kind), disable_web_page_preview: true };
+    if (kind === 1) params.reply_markup = { inline_keyboard: [[{ text: 'Confermo', callback_data: 'c:' + a.id }, { text: 'Devo disdire', callback_data: 'd:' + a.id }]] };
     try {
-      const m = await call('sendMessage', { chat_id: l.chat_id, text: render(data, a), reply_markup: keyboard, disable_web_page_preview: true });
-      st.upsertSent.run(a.id, p.id, l.chat_id, m.message_id, Date.now(), 'inviato', null);
-      log(manual ? 'promemoria_inviato_a_mano' : 'promemoria_inviato', 'telegram', a.date + ' ' + a.start);
+      const m = await call('sendMessage', params);
+      if (kind === 1) st.upsertSent.run(a.id, p.id, l.chat_id, m.message_id, Date.now(), 'inviato', null, slotOf(a));
+      else st.upsertSecond.run(a.id, slotOf(a), Date.now(), null);
+      log(kind === 2 ? 'promemoria2_inviato' : manual ? 'promemoria_inviato_a_mano' : 'promemoria_inviato', 'telegram', slotOf(a));
       return { ok: true };
     } catch (e) {
       if (e.code === 403) { st.delLinksByChat.run(l.chat_id); log('telegram_bloccato', 'telegram', p.id); }
-      st.upsertSent.run(a.id, p.id, l.chat_id, null, Date.now(), 'errore', String(e.message).slice(0, 200));
+      if (kind === 1) st.upsertSent.run(a.id, p.id, l.chat_id, null, Date.now(), 'errore', String(e.message).slice(0, 200), slotOf(a));
+      else st.upsertSecond.run(a.id, slotOf(a), Date.now(), String(e.message).slice(0, 200));
       log('promemoria_errore', 'telegram', String(e.message).slice(0, 120));
       return { ok: false, error: e.code === 403 ? 'Il paziente ha bloccato il bot: va ricollegato' : 'Telegram ha risposto: ' + e.message };
     }
+  }
+  // notifica al professionista sul suo Telegram (se l'ha collegato)
+  async function notifyOwner(text) {
+    const chat = meta('tg_owner_chat'); if (!chat) return;
+    try { await call('sendMessage', { chat_id: chat, text }); }
+    catch (e) { if (e.code === 403) { st.delMeta.run('tg_owner_chat'); st.delMeta.run('tg_owner_ts'); } console.error('Telegram, notifica:', e.message); }
   }
 
   /* ---------- controllo periodico: promemoria per gli appuntamenti di domani ---------- */
@@ -107,15 +142,25 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
       const data = readDoc(); if (!data) return;
       const cfg = (data.me && data.me.tg) || {};
       if (!cfg.enabled) return;
-      const now = romeNow();
-      if (now.min < toMin(cfg.time)) return;
-      const tomorrow = addDay(now.date, 1);
+      const H = 3600e3, now = Date.now();
+      const h1 = Math.min(72, Math.max(1, Number(cfg.h1) || 25));
+      const h2 = cfg.h2 === 0 || cfg.h2 === '0' ? 0 : Math.min(12, Math.max(0.5, Number(cfg.h2) || 1));
+      const today = romeNow().date, last = addDay(today, 4);
       for (const a of data.appts || []) {
-        if (a.date !== tomorrow || a.status !== 'prenotato' || st.sent.get(a.id)) continue;
-        const p = (data.patients || []).find(x => x.id === a.patientId);
-        if (!p || !(p.consensi && p.consensi.telegram) || !st.link.get(p.id)) continue;
-        await sendReminder(data, a, false);
-        await sleep(200);
+        if (a.status !== 'prenotato' || !a.date || a.date < today || a.date > last) continue;
+        const t = romeEpoch(a.date, a.start), left = t - now;
+        if (left <= 0) continue;
+        if (eligible(data, a).error) continue;
+        const row = st.sent.get(a.id), firstDone = row && row.slot === slotOf(a);
+        // primo promemoria: da h1 ore prima, purché manchi ancora almeno mezz'ora al secondo
+        if (!firstDone && left <= h1 * H && left > h2 * H + 30 * 60e3) { await sendReminder(data, a, false, 1); await sleep(200); continue; }
+        // secondo promemoria: h2 ore prima, se il paziente non ha chiesto di disdire
+        if (h2 > 0 && left <= h2 * H && left > 5 * 60e3) {
+          const r2 = st.second.get(a.id);
+          if (r2 && r2.slot === slotOf(a)) continue;
+          if (firstDone && row.status === 'disdetta') continue;
+          await sendReminder(data, a, false, 2); await sleep(200);
+        }
       }
       st.purgeCodes.run(Date.now());
     } catch (e) { console.error('Telegram, promemoria:', e.message); }
@@ -134,14 +179,22 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
         const code = text.split(/\s+/)[1] || '';
         const c = code && st.code.get(code);
         if (!c || c.expires < Date.now()) return reply(chatId, code ? 'Questo link non è valido o è scaduto: chiedi allo studio un nuovo link.' : `Questo è il servizio di promemoria di ${pro}. Per attivarlo usa il link personale che ti ha dato lo studio.`);
-        st.setLink.run(c.patient_id, chatId, Date.now());
         st.delCodesFor.run(c.patient_id);
+        if (c.patient_id === OWNER) {
+          st.setMeta.run('tg_owner_chat', chatId); st.setMeta.run('tg_owner_ts', String(Date.now()));
+          log('telegram_notifiche_collegate', 'telegram', '');
+          return reply(chatId, 'Fatto: in questa chat riceverai le conferme e le disdette dei pazienti.');
+        }
+        st.setLink.run(c.patient_id, chatId, Date.now());
         log('telegram_collegato', 'telegram', c.patient_id);
         return reply(chatId, `Collegamento riuscito. Riceverai qui i promemoria degli appuntamenti con ${pro}, con i pulsanti per confermare o avvisare se devi disdire.\n\nPer non riceverli più scrivi /stop.`);
       }
       if (/^\/stop\b/.test(text)) {
+        if (meta('tg_owner_chat') === chatId) { st.delMeta.run('tg_owner_chat'); st.delMeta.run('tg_owner_ts'); }
+        const who = st.links.all().filter(l => l.chat_id === chatId).map(l => ((data.patients || []).find(p => p.id === l.patient_id) || {}));
         st.delLinksByChat.run(chatId);
         log('telegram_scollegato_dal_paziente', 'telegram', '');
+        if (who.length) notifyOwner(`${who.map(p => [p.nome, p.cognome].filter(Boolean).join(' ')).join(', ')} ha disattivato i promemoria su Telegram.`);
         return reply(chatId, 'Fatto: non riceverai più promemoria. Se vorrai riattivarli, chiedi allo studio un nuovo link.');
       }
       return reply(chatId, `Questo è un servizio automatico di promemoria: i messaggi scritti qui non vengono letti. Per qualsiasi comunicazione contatta direttamente ${pro}.`);
@@ -155,9 +208,21 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
         try { await call('answerCallbackQuery', { callback_query_id: cq.id, text: 'Promemoria non più valido.' }); } catch {}
         return;
       }
+      const appt = (data.appts || []).find(a => a.id === apptId);
+      const msgId = cq.message && cq.message.message_id;
+      if (!appt || (row.slot && row.slot !== slotOf(appt)) || (row.message_id && msgId !== row.message_id)) {
+        try { await call('answerCallbackQuery', { callback_query_id: cq.id, text: 'Questo promemoria non è più valido: usa quello più recente.' }); } catch {}
+        try { await call('editMessageReplyMarkup', { chat_id: chatId, message_id: msgId, reply_markup: { inline_keyboard: [] } }); } catch {}
+        return;
+      }
       const status = kind === 'c' ? 'confermato' : 'disdetta';
       st.answer.run(status, Date.now(), apptId);
       log(kind === 'c' ? 'promemoria_confermato' : 'promemoria_disdetta', 'telegram', apptId);
+      {
+        const p = (data.patients || []).find(x => x.id === appt.patientId) || {}, s2 = (data.studi || []).find(x => x.id === appt.studioId) || {};
+        const quando = `${dayLabel(appt.date)} alle ${appt.start}${appt.online ? ' (online)' : s2.nome ? ' – ' + s2.nome : ''}`;
+        notifyOwner(kind === 'c' ? `Confermato: ${[p.nome, p.cognome].filter(Boolean).join(' ')}, ${quando}.` : `Disdetta richiesta: ${[p.nome, p.cognome].filter(Boolean).join(' ')}, ${quando}.\nRicordati di segnarlo nell’agenda di PsicoLogo.`);
+      }
       try { await call('answerCallbackQuery', { callback_query_id: cq.id, text: kind === 'c' ? 'Grazie, appuntamento confermato.' : 'Ricevuto: lo studio è stato avvisato.' }); } catch {}
       try {
         await call('editMessageText', { chat_id: chatId, message_id: cq.message.message_id, text: (cq.message.text || '') + (kind === 'c' ? '\n\nRisposta: confermato. Grazie!' : '\n\nRisposta: devo disdire. Lo studio è stato avvisato e ti ricontatterà se serve.') });
@@ -191,8 +256,9 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
     const bot = meta('tg_bot');
     if (url === '/api/telegram' && method === 'GET') {
       const links = {}; for (const l of st.links.all()) links[l.patient_id] = l.linked;
-      const sent = {}; for (const r of st.sentRecent.all(Date.now() - 60 * 864e5)) sent[r.appt_id] = { status: r.status, sent: r.sent, answered: r.answered, error: r.error };
-      send(res, 200, { configured: !!getToken(), bot, running, links, sent, defaultText: DEFAULT_TEXT }); return true;
+      const sent = {}; for (const r of st.sentRecent.all(Date.now() - 60 * 864e5)) sent[r.appt_id] = { status: r.status, sent: r.sent, answered: r.answered, error: r.error, slot: r.slot, second: r.second };
+      const ot = meta('tg_owner_ts');
+      send(res, 200, { configured: !!getToken(), bot, running, links, sent, owner: ot ? Number(ot) : null, defaultText: DEFAULT_TEXT, defaultText2: DEFAULT_TEXT2 }); return true;
     }
     if (url === '/api/telegram/token' && method === 'POST') {
       const b = await readJson(req); const token = String(b.token || '').trim();
@@ -201,7 +267,7 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
       try { me = await call('getMe', {}, token); } catch (e) { send(res, 400, { error: e.code === 401 || e.code === 404 ? 'Telegram non riconosce questa chiave: controlla di averla copiata tutta.' : 'Non riesco a contattare Telegram: ' + e.message }); return true; }
       try { await call('deleteWebhook', {}, token); } catch {}
       stop();
-      if (bot && bot !== me.username) { db.exec('DELETE FROM tg_links; DELETE FROM tg_codes;'); }
+      if (bot && bot !== me.username) { db.exec('DELETE FROM tg_links; DELETE FROM tg_codes;'); st.delMeta.run('tg_owner_chat'); st.delMeta.run('tg_owner_ts'); }
       st.setMeta.run('tg_token', encrypt(token)); st.setMeta.run('tg_bot', me.username); st.delMeta.run('tg_offset');
       log('telegram_configurato', ip, '@' + me.username);
       start();
@@ -209,7 +275,7 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
     }
     if (url === '/api/telegram/token' && method === 'DELETE') {
       stop();
-      for (const k of ['tg_token', 'tg_bot', 'tg_offset']) st.delMeta.run(k);
+      for (const k of ['tg_token', 'tg_bot', 'tg_offset', 'tg_owner_chat', 'tg_owner_ts']) st.delMeta.run(k);
       db.exec('DELETE FROM tg_links; DELETE FROM tg_codes;');
       log('telegram_rimosso', ip, bot ? '@' + bot : '');
       send(res, 200, { ok: true }); return true;
@@ -218,7 +284,7 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
       if (!getToken() || !bot) { send(res, 400, { error: 'Prima collega il bot nel Profilo.' }); return true; }
       const b = await readJson(req); const pid = String(b.patientId || '');
       const data = readDoc() || {};
-      if (!(data.patients || []).some(p => p.id === pid)) { send(res, 404, { error: 'Paziente non trovato.' }); return true; }
+      if (pid !== OWNER && !(data.patients || []).some(p => p.id === pid)) { send(res, 404, { error: 'Paziente non trovato.' }); return true; }
       st.delCodesFor.run(pid);
       const code = crypto.randomBytes(12).toString('base64url');
       const expires = Date.now() + CODE_DAYS * 864e5;
@@ -226,6 +292,7 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
       send(res, 200, { url: `https://t.me/${bot}?start=${code}`, expires, bot }); return true;
     }
     const m = /^\/api\/telegram\/link\/([\w-]{1,40})$/.exec(url);
+    if (url === '/api/telegram/owner' && method === 'DELETE') { st.delMeta.run('tg_owner_chat'); st.delMeta.run('tg_owner_ts'); st.delCodesFor.run(OWNER); log('telegram_notifiche_scollegate', ip, ''); send(res, 200, { ok: true }); return true; }
     if (m && method === 'DELETE') { st.delLink.run(m[1]); st.delCodesFor.run(m[1]); log('telegram_scollegato', ip, m[1]); send(res, 200, { ok: true }); return true; }
     if (url === '/api/telegram/send' && method === 'POST') {
       const b = await readJson(req); const data = readDoc() || {};
@@ -238,8 +305,9 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
   }
 
   return {
-    api, start, stop, tick, tables: ['tg_links', 'tg_codes', 'tg_sent'],
-    _test: { render, romeNow, addDay, dayLabel },
+    api, start, stop, tick, tables: ['tg_links', 'tg_codes', 'tg_sent', 'tg_second'],
+    _test: { render, romeNow, addDay, dayLabel, romeEpoch },
   };
 };
 module.exports.DEFAULT_TEXT = DEFAULT_TEXT;
+module.exports.DEFAULT_TEXT2 = DEFAULT_TEXT2;

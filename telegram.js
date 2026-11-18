@@ -135,6 +135,16 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
     catch (e) { if (e.code === 403) { st.delMeta.run('tg_owner_chat'); st.delMeta.run('tg_owner_ts'); } console.error('Telegram, notifica:', e.message); }
   }
 
+  // dati di esempio per le prove: il prossimo appuntamento reale, oppure uno inventato per domani
+  function sample(data) {
+    const today = romeNow().date;
+    const next = (data.appts || []).filter(a => a.status === 'prenotato' && a.date >= today).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start))[0];
+    const studio = (data.studi || []).find(s => s.attivo !== false) || { id: '', nome: 'Studio' };
+    const fake = { id: 'prova', patientId: '__prova', studioId: next ? next.studioId : studio.id, date: next ? next.date : addDay(today, 1), start: next ? next.start : '10:00', online: false };
+    const d = { ...data, patients: [...(data.patients || []), { id: '__prova', nome: 'Mario', cognome: 'Rossi' }] };
+    return { d, a: fake };
+  }
+
   /* ---------- controllo periodico: promemoria per gli appuntamenti di domani ---------- */
   let ticking = false;
   async function tick() {
@@ -222,6 +232,14 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
     }
     const cq = u.callback_query;
     if (cq && typeof cq.data === 'string') {
+      if (cq.data === 't:c' || cq.data === 't:d') {
+        const conf = cq.data === 't:c', chatId0 = String((cq.message && cq.message.chat && cq.message.chat.id) || '');
+        try { await call('answerCallbackQuery', { callback_query_id: cq.id, text: conf ? 'Grazie, appuntamento confermato. (prova)' : 'Ricevuto: lo studio è stato avvisato. (prova)' }); } catch {}
+        try { await call('editMessageText', { chat_id: chatId0, message_id: cq.message.message_id, text: (cq.message.text || '') + (conf ? '\n\nRisposta: confermato. (prova, nessun appuntamento modificato)' : '\n\nRisposta: devo disdire. (prova, nessun appuntamento modificato)') }); } catch {}
+        const { d, a } = sample(data), s2 = (d.studi || []).find(x => x.id === a.studioId) || {};
+        notifyOwner(`[PROVA] ${conf ? 'Confermato' : 'Disdetta richiesta'}: Mario Rossi, ${dayLabel(a.date)} alle ${a.start}${s2.nome ? ' – ' + s2.nome : ''}.`);
+        return;
+      }
       const [kind, apptId] = cq.data.split(':');
       const row = apptId && st.sent.get(apptId);
       const chatId = String((cq.message && cq.message.chat && cq.message.chat.id) || '');
@@ -313,6 +331,29 @@ module.exports = function createTelegram({ db, encrypt, decrypt, log, readDoc, a
       send(res, 200, { url: `https://t.me/${bot}?start=${code}`, expires, bot }); return true;
     }
     const m = /^\/api\/telegram\/link\/([\w-]{1,40})$/.exec(url);
+    if (url === '/api/telegram/test' && method === 'POST') {
+      const b = await readJson(req), chat = meta('tg_owner_chat');
+      if (!getToken()) { send(res, 400, { error: 'Prima collega il bot.' }); return true; }
+      if (!chat) { send(res, 400, { error: 'Le notifiche non sono ancora collegate al tuo Telegram: inquadra il codice QR e condividi il numero.' }); return true; }
+      const data = readDoc() || {};
+      try {
+        if (b.kind === 'reminder') {
+          const { d, a } = sample(data);
+          await call('sendMessage', { chat_id: chat, text: '[PROVA] ' + render(d, a, 1), disable_web_page_preview: true, reply_markup: { inline_keyboard: [[{ text: 'Confermo', callback_data: 't:c' }, { text: 'Devo disdire', callback_data: 't:d' }]] } });
+          await sleep(300);
+          await call('sendMessage', { chat_id: chat, text: '[PROVA] ' + render(d, a, 2), disable_web_page_preview: true });
+        } else {
+          const pro = [data.me && data.me.titolo, data.me && data.me.nome, data.me && data.me.cognome].filter(Boolean).join(' ');
+          await call('sendMessage', { chat_id: chat, text: `[PROVA] Notifiche di PsicoLogo attive${pro ? ' per ' + pro : ''}: quando un paziente conferma o chiede di disdire, il messaggio arriva qui.` });
+        }
+        log('telegram_prova', ip, b.kind === 'reminder' ? 'promemoria' : 'notifica');
+        send(res, 200, { ok: true });
+      } catch (e) {
+        if (e.code === 403) { st.delMeta.run('tg_owner_chat'); st.delMeta.run('tg_owner_ts'); send(res, 400, { error: 'Hai bloccato o eliminato la chat con il bot: ricollega le notifiche con il codice QR.' }); }
+        else send(res, 400, { error: 'Telegram ha risposto: ' + e.message });
+      }
+      return true;
+    }
     if (url === '/api/telegram/owner' && method === 'DELETE') { st.delMeta.run('tg_owner_chat'); st.delMeta.run('tg_owner_ts'); st.delCodesFor.run(OWNER); log('telegram_notifiche_scollegate', ip, ''); send(res, 200, { ok: true }); return true; }
     if (m && method === 'DELETE') { st.delLink.run(m[1]); st.delCodesFor.run(m[1]); log('telegram_scollegato', ip, m[1]); send(res, 200, { ok: true }); return true; }
     if (url === '/api/telegram/send' && method === 'POST') {

@@ -128,7 +128,7 @@ function decryptBuf(raw) {
 }
 const MAX_FILE = 10 * 1024 * 1024; // 10 MB per documento
 // Categorie: '' = documenti della cartella; le altre = moduli di consenso firmati
-const FILE_CATEGORIES = new Set(['', 'informato', 'privacy', 'entrambi', 'online', 'ts']);
+const FILE_CATEGORIES = new Set(['', 'informato', 'privacy', 'entrambi', 'online', 'ts', 'telegram']);
 // Solo questi formati; il tipo viene deciso dall'estensione, non da quanto dichiara il browser.
 const FILE_TYPES = {
   pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', heic: 'image/heic',
@@ -326,6 +326,7 @@ async function api(req, res, url) {
 
   const s = currentSession(req);
   if (!s) return send(res, 401, { error: 'Sessione scaduta: accedi di nuovo.' });
+  if (await tg.api(req, res, url, method, ip, { readJson, send })) return;
 
   if (url === '/api/logout' && method === 'POST') {
     q.delSession.run(s.hash); log('uscita', ip);
@@ -357,7 +358,8 @@ async function api(req, res, url) {
     db.exec('PRAGMA secure_delete = ON');
     db.exec('BEGIN');
     try {
-      for (const t of ['account', 'doc', 'sessions', 'files', 'meta', 'audit', 'locks']) db.exec(`DELETE FROM ${t}`);
+      tg.stop();
+      for (const t of ['account', 'doc', 'sessions', 'files', 'meta', 'audit', 'locks', ...tg.tables]) db.exec(`DELETE FROM ${t}`);
       db.exec('COMMIT');
     } catch (e) { db.exec('ROLLBACK'); throw e; }
     db.exec('VACUUM');
@@ -542,6 +544,16 @@ function backup() {
     q.purgeSessions.run(Date.now() - SESSION_IDLE_MS, Date.now() - SESSION_MAX_MS);
   } catch (e) { console.error('Backup non riuscito:', e.message); }
 }
+/* ---------------- promemoria Telegram ---------------- */
+const tg = require('./telegram.js')({
+  db, encrypt, decrypt, log, apiBase: process.env.TG_API,
+  readDoc: () => { const d = q.doc.get(); return d ? decrypt(d.enc) : null; },
+});
+tg.start();
+const TG_TICK = Number(process.env.TG_TICK_MS) || 5 * 60 * 1000;
+setTimeout(() => tg.tick(), Math.min(30 * 1000, TG_TICK));
+setInterval(() => tg.tick(), TG_TICK); // ogni 5 minuti: promemoria per gli appuntamenti di domani
+
 backup();
 setInterval(backup, 60 * 60 * 1000); // controlla ogni ora, ne crea al massimo uno al giorno
 

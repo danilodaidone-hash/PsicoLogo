@@ -649,6 +649,22 @@ const addrData=f=>({ind:(f.ind||'').trim(),cap:(f.cap||'').trim(),citta:(f.citta
 const addrBad=f=>f.cap&&!/^\d{5}$/.test(f.cap.trim())?'Il CAP deve avere 5 cifre':f.prov&&!/^[A-Za-z]{2}$/.test(f.prov.trim())?'La provincia è la sigla di 2 lettere (es. RM)':'';
 const EXTRA_PREST=['Relazione clinica','Certificato','Somministrazione e correzione di test','Restituzione dei risultati','Colloquio con i genitori','Incontro con la scuola','Consulenza telefonica','Supervisione'];
 const nowHM=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
+// demo: prolunga gli appuntamenti ricorrenti dei pazienti fino al 31 dicembre (almeno due settimane avanti)
+function extendSample(){
+  const END=[`${TODAY.getFullYear()}-12-31`,iso(addDays(TODAY,14))].sort()[1];
+  const FESTE=['01-01','01-06','04-25','05-01','06-02','08-15','11-01','12-08','12-25','12-26'];
+  const busy=(d,st,start,dur,sid)=>DB.appts.some(a=>a.date===d&&a.status!=='disdetto'&&a.studioId===sid&&toMin(a.start)<toMin(start)+dur&&toMin(start)<toMin(a.start)+a.dur);
+  let added=0;
+  DB.patients.forEach(p=>{
+    const own=DB.appts.filter(a=>a.patientId===p.id&&a.type==='Seduta');if(!own.length)return;
+    const cnt={};own.forEach(a=>{const k=wd(a.date)+'|'+a.start+'|'+a.studioId+'|'+a.dur;cnt[k]=(cnt[k]||0)+1});
+    const [w,start,sid,dur]=Object.entries(cnt).sort((x,y)=>y[1]-x[1])[0][0].split('|');
+    let d=addDays(monday(TODAY),+w);if(iso(d)<=T)d=addDays(d,7);
+    for(;iso(d)<=END;d=addDays(d,7)){const ds=iso(d);
+      if(FESTE.includes(ds.slice(5))||DB.appts.some(a=>a.patientId===p.id&&a.date===ds)||busy(ds,null,start,+dur,sid))continue;
+      DB.appts.push({id:uid(),patientId:p.id,studioId:sid,date:ds,start,dur:+dur,type:'Seduta',status:'prenotato',invoiceId:null});added++}
+  });
+  return {added,END}}
 const isEmail=u=>u.length<=254&&/^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/.test(u);
 const cap=s=>s.replace(/^./,c=>c.toUpperCase());
 
@@ -1133,7 +1149,7 @@ function vProfile(){
     <div><button type="button" class="btn small" data-act="about">Leggi le condizioni di licenza</button></div></div></section></div>
   ${DEMO?`<section class="panel" style="border-color:var(--warn)"><header><h2>Server dimostrativo</h2><span class="chip warn">Demo</span></header><div class="body row" style="justify-content:space-between;align-items:center">
     <p class="muted" style="margin:0;max-width:62ch">Cancella tutti i dati (pazienti, fatture, documenti, logo, utente) e riporta l’app alla prima configurazione, pronta per la prossima dimostrazione.</p>
-    <button type="button" class="btn danger" data-act="demoReset">Azzera demo</button></div></section>`:''}
+    <div class="row"><button type="button" class="btn" data-act="demoExtend">Estendi l’agenda di esempio</button><button type="button" class="btn danger" data-act="demoReset">Azzera demo</button></div></div></section>`:''}
   <section class="panel"><header><h2>Codice di recupero</h2>${HAS_REC?'<span class="chip good">Attivo</span>':'<span class="chip bad">Non creato</span>'}</header><div class="body row" style="justify-content:space-between;align-items:center">
     <p class="muted" style="margin:0;max-width:62ch">${HAS_REC?'Serve se dimentichi la password. Se l’hai perso o pensi che qualcuno l’abbia visto, generane uno nuovo: il precedente smette di funzionare.':'Non hai ancora un codice di recupero: se dimentichi la password non potresti rientrare da solo. Crealo adesso e conservalo al sicuro.'}</p>
     <button type="button" class="btn ${HAS_REC?'':'primary'}" data-act="newRec">${HAS_REC?'Genera un nuovo codice':'Crea il codice di recupero'}</button></div></section>
@@ -1808,6 +1824,7 @@ document.addEventListener('click',e=>{
     case 'uiStyle':setUI('style',el.dataset.v);break;
     case 'uiLayout':setUI('layout',el.dataset.v);break;
     case 'uiPal':setUI('pal',el.dataset.v);toast('Colori: '+PALETTE[el.dataset.v][0]);break;
+    case 'demoExtend':{const r=extendSample();if(r.added){save();render()}toast(r.added?`Aggiunti ${r.added} appuntamenti fino al ${fmtD(r.END)}`:`L’agenda arriva già fino al ${fmtD(r.END)}`);break}
     case 'demoReset':modal('Azzera la demo',`<p style="margin:0">Tutti i dati di questa installazione vengono <b>cancellati</b> e l’app torna alla prima configurazione. Sul server <b>non resta nessuna copia</b>: l’operazione non si può annullare.</p>
       <label class="fl" for="drPw">La tua password<input type="password" id="drPw" name="pw" autocomplete="current-password"></label><p id="drMsg" class="err" hidden></p>`,
       `<button type="button" class="btn" data-act="close">Annulla</button><button class="btn primary" style="background:var(--bad);border-color:var(--bad)">Azzera tutto</button>`,

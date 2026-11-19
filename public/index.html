@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>PsicoLogo</title>
-<script>try{var u=JSON.parse(localStorage.getItem('pl_ui')||'{}'),r=document.documentElement,st=u.style||'agenda',pl=u.pal||'inchiostro';if(/^(agenda|contrasto|classico|morbido|compatto|essenziale)$/.test(st))r.dataset.style=st;if(/^(inchiostro|oceano|lavanda|terracotta|ardesia|bosco|prugna|sabbia)$/.test(pl))r.dataset.pal=pl;if(/^(alto|diario)$/.test(u.layout))r.dataset.layout=u.layout}catch(e){}</script>
+<script>try{var u=JSON.parse(localStorage.getItem('pl_ui')||'{}'),r=document.documentElement,st=u.style||'agenda',pl=u.pal||'inchiostro';if(st==='contrastoscuro'){r.dataset.style='contrasto';r.dataset.theme='dark'}else if(/^(agenda|contrasto|classico|morbido|compatto|essenziale)$/.test(st))r.dataset.style=st;if(/^(inchiostro|oceano|lavanda|terracotta|ardesia|bosco|prugna|sabbia)$/.test(pl))r.dataset.pal=pl;if(/^(alto|diario)$/.test(u.layout))r.dataset.layout=u.layout}catch(e){}</script>
 <style>
 @font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
 @font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
@@ -387,6 +387,7 @@ main{gap:18px}
 /* ===== Stile "Contrasto": come Agenda, ma pieno e deciso ===== */
 :root[data-style="contrasto"]{--side:#16213E;--side-fg:#E8ECF5;--side-muted:#9AA6C2;--hi:#FFC21A;--hi-ink:#16213E;--r:2px}
 @media (prefers-color-scheme: dark){:root[data-style="contrasto"]:not([data-theme="light"]){--side:#0B1222;--side-muted:#8792AD}}
+:root[data-style="contrasto"][data-theme="dark"]{--side:#0B1222;--side-muted:#8792AD}
 [data-style="contrasto"] h1{font-size:3.1rem}
 [data-style="contrasto"] .side{background:var(--side);color:var(--side-fg);border-right:0}
 [data-style="contrasto"] .side .brand b{color:#fff}
@@ -1262,11 +1263,13 @@ function newRecoveryForm(){
 
 /* ---------- logo personalizzato ---------- */
 const PALETTE={"inchiostro":["Inchiostro","#F5F7FA","#24365E","#E2E8F3","#A9BCE3","#0F141C"],"salvia":["Salvia","#F2F4F3","#2C6B5E","#DCEBE6","#6CC0AA","#0E1412"],"oceano":["Oceano","#F1F4F7","#1F5F99","#DCE8F4","#7DB4E8","#0D131A"],"lavanda":["Lavanda","#F4F2F7","#5B4B9A","#E6E1F4","#B3A5EC","#121019"],"terracotta":["Terracotta","#F7F3F0","#A0452A","#F5E1D8","#EE9878","#17110E"],"ardesia":["Ardesia","#F2F3F5","#3E4C63","#E0E5EE","#A9B8D1","#111317"],"bosco":["Bosco","#F1F4F0","#33642A","#DDEBD8","#8FCB7F","#0F140D"],"prugna":["Prugna","#F6F1F4","#8A2F6B","#F3DDEB","#E890C8","#160F13"],"sabbia":["Sabbia","#F6F4EE","#735510","#EFE6CC","#DDB863","#14120D"]};
-const STILI=[['agenda','Agenda','Orari in grande, inchiostro blu, niente riquadri (predefinito)',"'Big Shoulders','Arial Narrow',sans-serif"],['contrasto','Contrasto','Come Agenda ma deciso: barra blu notte, giallo segnaletica, titoli pesanti',"'Big Shoulders','Arial Narrow',sans-serif"],['moderno','Standard','Sobrio, come un’app del computer','-apple-system,system-ui,"Segoe UI",sans-serif'],['classico','Classico','Titoli con grazie, toni sobri','"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif'],['morbido','Morbido','Angoli arrotondati e pulsanti a pillola','ui-rounded,"SF Pro Rounded","Nunito",system-ui'],['compatto','Compatto','Più righe in liste, agenda e tabelle','-apple-system,system-ui,"Segoe UI",sans-serif'],['essenziale','Essenziale','Carattere del dispositivo, linee minime','system-ui,-apple-system,"Segoe UI",sans-serif']];
+const STILI=[['agenda','Agenda','Orari in grande, inchiostro blu, niente riquadri (predefinito)',"'Big Shoulders','Arial Narrow',sans-serif"],['contrasto','Contrasto','Come Agenda ma deciso: barra blu notte, giallo segnaletica, titoli pesanti',"'Big Shoulders','Arial Narrow',sans-serif"],['contrastoscuro','Contrasto scuro','Contrasto su fondo scuro, sempre, anche col dispositivo in modalità chiara',"'Big Shoulders','Arial Narrow',sans-serif"],['moderno','Standard','Sobrio, come un’app del computer','-apple-system,system-ui,"Segoe UI",sans-serif'],['classico','Classico','Titoli con grazie, toni sobri','"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif'],['morbido','Morbido','Angoli arrotondati e pulsanti a pillola','ui-rounded,"SF Pro Rounded","Nunito",system-ui'],['compatto','Compatto','Più righe in liste, agenda e tabelle','-apple-system,system-ui,"Segoe UI",sans-serif'],['essenziale','Essenziale','Carattere del dispositivo, linee minime','system-ui,-apple-system,"Segoe UI",sans-serif']];
 const LAYOUTS=[['lato','Menu a sinistra','Il menu sta in una colonna laterale (predefinito)'],['alto','Menu in alto','Barra orizzontale in cima, contenuto a tutta larghezza'],['diario','Diario','Menu in alto e una colonna centrale, un riquadro sotto l’altro']];
 function uiPrefs(){const u=(DB&&DB.me&&DB.me.ui)||{};return{style:STILI.some(x=>x[0]===u.style)?u.style:'agenda',pal:PALETTE[u.pal]?u.pal:'inchiostro',layout:LAYOUTS.some(x=>x[0]===u.layout)?u.layout:'lato'}}
 function applyUI(){const u=uiPrefs(),r=document.documentElement;
-  if(u.style==='moderno')delete r.dataset.style;else r.dataset.style=u.style;
+  // "Contrasto scuro" = stile Contrasto con il tema scuro sempre attivo
+  if(u.style==='moderno')delete r.dataset.style;else r.dataset.style=u.style==='contrastoscuro'?'contrasto':u.style;
+  if(u.style==='contrastoscuro')r.dataset.theme='dark';else delete r.dataset.theme;
   if(u.pal==='salvia')delete r.dataset.pal;else r.dataset.pal=u.pal;
   if(u.layout==='lato')delete r.dataset.layout;else r.dataset.layout=u.layout;
   try{localStorage.setItem('pl_ui',JSON.stringify(u))}catch(e){}
@@ -1276,7 +1279,7 @@ function vAspetto(){const u=uiPrefs();
   return `<section class="panel"><header><h2>Aspetto</h2><span class="muted small">Vale su tutti i tuoi dispositivi</span></header><div class="body" style="display:flex;flex-direction:column;gap:16px">
     <div><h3 style="margin-bottom:8px">Disposizione</h3><div class="uiopts">${LAYOUTS.map(([k,n,d])=>`<button type="button" class="uiopt" data-act="uiLayout" data-v="${k}" aria-pressed="${u.layout===k}"><span class="lay lay-${k}" aria-hidden="true"><i></i><i></i></span><b>${n}</b><small>${d}</small></button>`).join('')}</div>
       <p class="muted small" style="margin:8px 0 0">Su telefono il menu resta in basso in tutte le disposizioni.</p></div>
-    <div><h3 style="margin-bottom:8px">Stile</h3><div class="uiopts">${STILI.map(([k,n,d,f])=>`<button type="button" class="uiopt" data-act="uiStyle" data-v="${k}" aria-pressed="${u.style===k}"><span class="aa" style="font-family:${f.replace(/"/g,'&quot;')}">Aa</span><b>${n}</b><small>${d}</small></button>`).join('')}</div></div>
+    <div><h3 style="margin-bottom:8px">Stile</h3><div class="uiopts">${STILI.map(([k,n,d,f])=>`<button type="button" class="uiopt" data-act="uiStyle" data-v="${k}" aria-pressed="${u.style===k}"><span class="aa" style="font-family:${f.replace(/"/g,'&quot;')}${k==='contrastoscuro'?';background:#0B1222;color:#FFC21A;padding:3px 7px;border-radius:2px':k==='contrasto'?';background:#FFC21A;color:#16213E;padding:3px 7px;border-radius:2px':''}">Aa</span><b>${n}</b><small>${d}</small></button>`).join('')}</div></div>
     <div><h3 style="margin-bottom:8px">Colori</h3><div class="uiopts">${Object.entries(PALETTE).map(([k,[n,bg,ac,so,dac,dbg]])=>`<button type="button" class="uiopt" data-act="uiPal" data-v="${k}" aria-pressed="${u.pal===k}"><span class="sw" aria-hidden="true"><i style="background:${ac}"></i><i style="background:${so}"></i><i style="background:${bg}"></i><i style="background:${dbg}"></i><i style="background:${dac}"></i></span><b>${n}</b></button>`).join('')}</div>
     <p class="muted small" style="margin:8px 0 0">Ogni combinazione ha una versione chiara e una scura: si usa quella scelta nelle impostazioni del dispositivo.</p></div></div></section>`}
 function applyLogo(ver){

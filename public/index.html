@@ -721,11 +721,16 @@ function seed(prof,st){const L=prof==='logopedia',N=prof==='neuropsicomotricita'
   patients.forEach(p=>{if(p.cf.includes('..')){p.sesso=+p.cf.slice(9,11)>40?'F':'M';p.lnasc='Roma (RM)';p.lnascCod=p.cf.slice(11,15);p.cf=cfBuild(p.nome,p.cognome,p.nascita,p.sesso,p.lnascCod)}});
   const appts=[],notes=[],tests=[],invoices=[];
   const W0=monday(TODAY);
+  // agenda di esempio fino al 31 dicembre (almeno due settimane avanti), senza i giorni festivi
+  const END=[`${TODAY.getFullYear()}-12-31`,iso(addDays(TODAY,14))].sort()[1];
+  const lastW=Math.ceil((parse(END)-W0)/(7*864e5));
+  const FESTE=['01-01','01-06','04-25','05-01','06-02','08-15','11-01','12-08','12-25','12-26'];
   const noteTxt=N?['Bambino collaborante. Percorso motorio con equilibrio e salti: migliora la stabilità. Consegnate indicazioni di gioco ai genitori.','Lavoro su motricità fine e prassie: ritaglio e costruzioni. Buona attenzione nella prima parte, poi necessita di pause.','Seduta centrata sulla regolazione: gioco sensoriale e attività a turno. Più tempo di gioco condiviso rispetto all’ultima volta.']:L?['Bambino collaborante. Esercizi di discriminazione e produzione in parola isolata: migliora la precisione. Consegnato materiale per casa ai genitori.','Lavoro sulla lettura di sillabe e parole bisillabe. Velocità in lieve miglioramento; persiste qualche inversione. Da rinforzare a casa.','Seduta centrata su denominazione e frasi brevi. Buona partecipazione, affaticamento nella seconda parte. Proseguire con supporti visivi.']:['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
   patients.forEach(p=>{
-    for(let w=-5;w<=2;w++){
+    for(let w=-5;w<=lastW;w++){
       p.slots.forEach(([d,t])=>{
         const date=iso(addDays(W0,w*7+d));
+        if(date>END||FESTE.includes(date.slice(5)))return;
         let status='prenotato';
         if(date<T){const x=rnd();status=x<.07?'assente':x<.13?'disdetto':'svolto'}
         const type=w===-5?(L||N?'Valutazione':'Primo colloquio'):'Seduta';

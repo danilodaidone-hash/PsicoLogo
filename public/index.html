@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>PsicoLogo</title>
-<script>try{var u=JSON.parse(localStorage.getItem('pl_ui')||'{}'),r=document.documentElement;if(/^(classico|morbido|compatto|essenziale)$/.test(u.style))r.dataset.style=u.style;if(/^(oceano|lavanda|terracotta|ardesia|bosco|prugna|sabbia)$/.test(u.pal))r.dataset.pal=u.pal;if(/^(alto|diario)$/.test(u.layout))r.dataset.layout=u.layout}catch(e){}</script>
+<script>try{var u=JSON.parse(localStorage.getItem('pl_ui')||'{}'),r=document.documentElement,st=u.style||'agenda',pl=u.pal||'inchiostro';if(/^(agenda|classico|morbido|compatto|essenziale)$/.test(st))r.dataset.style=st;if(/^(inchiostro|oceano|lavanda|terracotta|ardesia|bosco|prugna|sabbia)$/.test(pl))r.dataset.pal=pl;if(/^(alto|diario)$/.test(u.layout))r.dataset.layout=u.layout}catch(e){}</script>
 <style>
 @font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
 @font-face{font-family:'Bricolage Grotesque';src:url('/fonts/bricolage-grotesque-latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
@@ -13,6 +13,10 @@
 @font-face{font-family:'Atkinson Hyperlegible';src:url('/fonts/atkinson-hyperlegible-latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
 @font-face{font-family:'JetBrains Mono';src:url('/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'JetBrains Mono';src:url('/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Big Shoulders';src:url('/typo/bigshoulders-700.woff') format('woff');font-weight:700;font-display:swap}
+@font-face{font-family:'Big Shoulders';src:url('/typo/bigshoulders-400.woff') format('woff');font-weight:400;font-display:swap}
+@font-face{font-family:'Instrument Sans';src:url('/typo/instrumentsans-400.woff') format('woff');font-weight:400;font-display:swap}
+@font-face{font-family:'Instrument Sans';src:url('/typo/instrumentsans-700.woff') format('woff');font-weight:600 700;font-display:swap}
 /* Layout: gestionale personale a due colonne — barra laterale con studio attivo e account, area di lavoro a schede. Il colore identifica lo studio. */
 :root{
   --bg:#F2F4F3; --surface:#FFFFFF; --surface-2:#E9EEEC; --fg:#16201D; --muted:#5B6A64; --line:#D8E0DC;
@@ -320,8 +324,70 @@ main{gap:18px}
 .ev{border-radius:3px}
 .avatar{font-family:var(--f-body);font-weight:600}
 .avail span{text-transform:none;letter-spacing:0;font-size:.7rem;font-weight:600}
+/* ===== Stile "Agenda": orari in grande, inchiostro blu, niente riquadri ===== */
+:root[data-pal="inchiostro"]{--bg:#F5F7FA; --surface:#FFFFFF; --surface-2:#EBEFF5; --fg:#1E2A44; --muted:#5F6B84; --line:#DCE1EA; --accent:#24365E; --accent-soft:#E2E8F3; --on-accent:#FFFFFF;}
+@media (prefers-color-scheme: dark){:root[data-pal="inchiostro"]:not([data-theme="light"]){--bg:#0F141C; --surface:#161D28; --surface-2:#1D2532; --fg:#E5EAF2; --muted:#9AA5B9; --line:#2A3444; --accent:#A9BCE3; --accent-soft:#222E44; --on-accent:#0F141C;}}
+:root[data-pal="inchiostro"][data-theme="dark"]{--bg:#0F141C; --surface:#161D28; --surface-2:#1D2532; --fg:#E5EAF2; --muted:#9AA5B9; --line:#2A3444; --accent:#A9BCE3; --accent-soft:#222E44; --on-accent:#0F141C;}
+:root[data-style="agenda"]{--f-display:'Big Shoulders','Arial Narrow',sans-serif;--f-body:'Instrument Sans',-apple-system,'Segoe UI',system-ui,sans-serif;--r:3px}
+[data-style="agenda"] body{font-size:15px;line-height:1.45}
+[data-style="agenda"] h1{font:700 2.6rem/1 var(--f-display);letter-spacing:.005em}
+[data-style="agenda"] h2{font:700 1.55rem/1.1 var(--f-display);letter-spacing:.01em}
+[data-style="agenda"] h3{font-weight:700}
+[data-style="agenda"] .brand b{font:700 1.65rem/1 var(--f-display);letter-spacing:.02em}
+[data-style="agenda"] .eyebrow{font-size:.85rem;color:var(--muted);font-weight:400}
+/* barra laterale: carta, voci di testo semplici */
+[data-style="agenda"] .side{background:var(--bg);border-right:1px solid var(--line)}
+[data-style="agenda"] nav button{color:var(--muted);font-weight:400;padding:7px 4px;border-radius:0}
+[data-style="agenda"] nav button:hover{background:none;color:var(--fg)}
+[data-style="agenda"] nav button[aria-current="page"]{background:none;box-shadow:none;color:var(--fg);font-weight:700}
+[data-style="agenda"] .badge{font:700 .95rem var(--f-display);background:none;color:var(--fg);padding:0}
+[data-style="agenda"] .sedesel select{background:var(--surface);font-weight:400}
+/* niente riquadri: sezioni separate da una riga, titoli nel carattere degli orari */
+[data-style="agenda"] .panel{background:none;border:0;border-radius:0}
+[data-style="agenda"] .panel>header{background:none;border-bottom:1px solid var(--line);padding:0 0 10px}
+[data-style="agenda"] .panel>header h2{font-size:1.65rem}
+[data-style="agenda"] .panel .body{padding:14px 0}
+[data-style="agenda"] .list li{padding:12px 0;border-top:1px solid var(--line)}
+[data-style="agenda"] .list li:first-child{border-top:0}
+[data-style="agenda"] .tbl-wrap{background:var(--surface);border:1px solid var(--line);border-radius:3px}
+[data-style="agenda"] .two{gap:44px}
+/* riepilogo: numeri grandi, senza caselle */
+[data-style="agenda"] .stats{background:none;border:0;gap:14px 28px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+[data-style="agenda"] .stats .stat{background:none;padding:0;flex-direction:column-reverse;gap:0}
+[data-style="agenda"] .stat b{font:700 2.1rem/1.05 var(--f-display)}
+[data-style="agenda"] .stat span{font-size:.85rem}
+/* stati come parole colorate, non etichette */
+[data-style="agenda"] .chip{background:none!important;padding:0;border-radius:0;font-size:.82rem}
+[data-style="agenda"] .chip.sede{border:0;color:var(--muted);font-weight:400}
+[data-style="agenda"] .btn{border-radius:3px}
+[data-style="agenda"] .btn.primary{box-shadow:none}
+/* oggi: il giorno in grande e la colonna degli orari */
+[data-style="agenda"] .dayh{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;column-gap:14px;justify-content:start;align-items:end}
+[data-style="agenda"] .dayh .dn{grid-column:1;grid-row:1/3;font-size:6.2rem;line-height:.78;letter-spacing:-.01em}
+[data-style="agenda"] .dayh .dd{grid-column:2;grid-row:1;font:400 1.3rem/1.1 var(--f-body);text-transform:lowercase}
+[data-style="agenda"] .dayh .dm{grid-column:2;grid-row:2;font:400 1rem/1.3 var(--f-body);color:var(--muted);padding-bottom:2px}
+[data-style="agenda"] .tl-time{font:700 1.85rem/1 var(--f-display);width:76px;letter-spacing:.01em}
+[data-style="agenda"] .today li{border-left:4px solid var(--pc,var(--line));padding-left:14px}
+[data-style="agenda"] .today li .dot{display:none}
+[data-style="agenda"] .today li.done .tl-time{color:color-mix(in srgb,var(--muted) 55%,transparent)}
+[data-style="agenda"] .today li.done b{font-weight:600}
+[data-style="agenda"] .nowrow{border-left:0!important}
+/* agenda settimanale */
+[data-style="agenda"] .daystrip button b,[data-style="agenda"] .cal-head b{font-family:var(--f-display)}
+[data-style="agenda"] .login-card{border-radius:3px;box-shadow:none}
+[data-style="agenda"] .head .eyebrow{margin-bottom:10px}
+[data-style="agenda"] .list a,[data-style="agenda"] .panel a{text-decoration:none}
+[data-style="agenda"] .list a:hover,[data-style="agenda"] .panel a:hover{text-decoration:underline;text-underline-offset:3px}
+@media (max-width:760px){[data-style="agenda"] nav .badge{background:var(--bad);color:#fff;font:700 .62rem var(--f-body);padding:0 5px;border-radius:99px}
+  [data-style="agenda"] .dayh .dn{font-size:4.6rem}[data-style="agenda"] h1{font-size:2.1rem}}
+[data-style="agenda"] .login .brand b{font-size:2rem}
 /* ===== Layout: menu in alto / diario (solo schermi grandi; su telefono resta il menu in basso) ===== */
 .appfoot{display:none}
+.list li.nowrow{padding:0;height:0;border:0;border-top:2px solid var(--bad);position:relative;overflow:visible}
+.list li.nowrow span{position:absolute;left:0;top:-11px;background:var(--bad);color:#fff;font:700 .75rem var(--f-display);padding:2px 6px;border-radius:2px}
+.list li.nowrow+li{border-top:0}
+.dayh .dy{display:none}
+[data-style="agenda"] .dayh .dy{display:inline}
 @media (min-width:761px){
   :root[data-layout="alto"] .app,:root[data-layout="diario"] .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr auto}
   :root[data-layout="alto"] .side,:root[data-layout="diario"] .side{flex-direction:row;align-items:center;height:auto;position:sticky;top:0;z-index:30;padding:8px clamp(16px,3vw,36px);gap:22px;border-right:0;border-bottom:1px solid var(--line)}
@@ -807,7 +873,7 @@ function vToday(){
   const noNote=DB.appts.filter(a=>inStudio(a)&&a.status==='svolto'&&a.date>=lim&&a.date<=T&&!DB.notes.some(n=>n.apptId===a.id));
   const unpaid=DB.invoices.filter(i=>!i.paid&&inStudio(i));
   const where=studiDelGiorno(T);
-  return `<div class="head"><div><div class="eyebrow">${S.studio==='tutti'?'Tutti gli studi':esc(studio(S.studio).nome)}</div><h1>${cap(fmtLong(T))}</h1>
+  return `<div class="head"><div><div class="eyebrow">${S.studio==='tutti'?'Tutti gli studi':esc(studio(S.studio).nome)}</div><h1 class="dayh"><span class="dd">${cap(GIORNI[wd(T)])}</span> <span class="dn">${TODAY.getDate()}</span> <span class="dm">${MESI[TODAY.getMonth()]}<span class="dy"> ${TODAY.getFullYear()}</span></span></h1>
     <div class="sede-where">${where.length?where.map(s=>`<span class="chip sede" style="${sCol(s.id)}"><span class="dot"></span>${esc(s.nome)} · ${s.orari[wd(T)].join('–')}</span>`).join(''):'<span class="muted">Oggi non hai orari di studio.</span>'}</div></div>
     <button class="btn primary" data-act="newAppt">Nuovo appuntamento</button></div>
   ${backupDue()?`<div class="callout row" style="justify-content:space-between;align-items:center"><span><b>Promemoria settimanale:</b> scarica il backup dei tuoi dati. Ultimo backup: ${backupAgo()}.</span><button type="button" class="btn small primary" data-act="bkDown">Scarica il backup</button></div>`:''}
@@ -819,11 +885,11 @@ function vToday(){
   </div>
   <div class="two">
     <section class="panel"><header><h2>Appuntamenti di oggi</h2><button class="btn ghost small" data-act="go" data-v="agenda">Apri agenda</button></header>
-      ${today.length?`<ul class="list">${today.map(a=>{const p=pat(a.patientId);return `<li style="${sCol(a.studioId)}">
+      ${today.length?`<ul class="list today">${(()=>{const nm=new Date().getHours()*60+new Date().getMinutes();let nowDone=false;return today.map(a=>{const p=pat(a.patientId);const nowLi=!nowDone&&toMin(a.start)>nm?(nowDone=true,`<li class="nowrow" aria-label="Adesso"><span>${pad(Math.floor(nm/60))}:${pad(nm%60)}</span></li>`):'';return nowLi+`<li class="${a.status!=='prenotato'?'done':''}" style="${sCol(a.studioId)}">
         <span class="tl-time">${a.start}</span><span class="dot"></span>
         <div class="grow"><a href="#" data-act="openPt" data-id="${p.id}"><b>${esc(full(p))}</b></a> ${tgLabel(a)}<div class="muted" style="font-size:.85rem">${a.type} · ${esc(studio(a.studioId).nome)}${a.online?` · <b>online</b>${apptLink(a)?` · <a href="${esc(apptLink(a))}" target="_blank" rel="noopener">Apri videochiamata</a>`:''}`:''}</div></div>
         ${a.status==='prenotato'?`<div class="row"><button class="btn small" data-act="status" data-id="${a.id}" data-v="svolto">Svolto</button><button class="btn small" data-act="status" data-id="${a.id}" data-v="assente">Assente</button></div>`:stChip(a.status)}
-      </li>`}).join('')}</ul>`:`<p class="empty">Nessun appuntamento oggi. <button class="linkbtn" data-act="newAppt">Prenotane uno</button></p>`}
+      </li>`}).join('')})()}</ul>`:`<p class="empty">Nessun appuntamento oggi. <button class="linkbtn" data-act="newAppt">Prenotane uno</button></p>`}
     </section>
     <section class="panel"><header><h2>Da sistemare</h2></header>
       <ul class="list">
@@ -1109,10 +1175,10 @@ function newRecoveryForm(){
 }
 
 /* ---------- logo personalizzato ---------- */
-const PALETTE={"salvia":["Salvia","#F2F4F3","#2C6B5E","#DCEBE6","#6CC0AA","#0E1412"],"oceano":["Oceano","#F1F4F7","#1F5F99","#DCE8F4","#7DB4E8","#0D131A"],"lavanda":["Lavanda","#F4F2F7","#5B4B9A","#E6E1F4","#B3A5EC","#121019"],"terracotta":["Terracotta","#F7F3F0","#A0452A","#F5E1D8","#EE9878","#17110E"],"ardesia":["Ardesia","#F2F3F5","#3E4C63","#E0E5EE","#A9B8D1","#111317"],"bosco":["Bosco","#F1F4F0","#33642A","#DDEBD8","#8FCB7F","#0F140D"],"prugna":["Prugna","#F6F1F4","#8A2F6B","#F3DDEB","#E890C8","#160F13"],"sabbia":["Sabbia","#F6F4EE","#735510","#EFE6CC","#DDB863","#14120D"]};
-const STILI=[['moderno','Standard','Sobrio, come un’app del computer (predefinito)','-apple-system,system-ui,"Segoe UI",sans-serif'],['classico','Classico','Titoli con grazie, toni sobri','"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif'],['morbido','Morbido','Angoli arrotondati e pulsanti a pillola','ui-rounded,"SF Pro Rounded","Nunito",system-ui'],['compatto','Compatto','Più righe in liste, agenda e tabelle','-apple-system,system-ui,"Segoe UI",sans-serif'],['essenziale','Essenziale','Carattere del dispositivo, linee minime','system-ui,-apple-system,"Segoe UI",sans-serif']];
+const PALETTE={"inchiostro":["Inchiostro","#F5F7FA","#24365E","#E2E8F3","#A9BCE3","#0F141C"],"salvia":["Salvia","#F2F4F3","#2C6B5E","#DCEBE6","#6CC0AA","#0E1412"],"oceano":["Oceano","#F1F4F7","#1F5F99","#DCE8F4","#7DB4E8","#0D131A"],"lavanda":["Lavanda","#F4F2F7","#5B4B9A","#E6E1F4","#B3A5EC","#121019"],"terracotta":["Terracotta","#F7F3F0","#A0452A","#F5E1D8","#EE9878","#17110E"],"ardesia":["Ardesia","#F2F3F5","#3E4C63","#E0E5EE","#A9B8D1","#111317"],"bosco":["Bosco","#F1F4F0","#33642A","#DDEBD8","#8FCB7F","#0F140D"],"prugna":["Prugna","#F6F1F4","#8A2F6B","#F3DDEB","#E890C8","#160F13"],"sabbia":["Sabbia","#F6F4EE","#735510","#EFE6CC","#DDB863","#14120D"]};
+const STILI=[['agenda','Agenda','Orari in grande, inchiostro blu, niente riquadri (predefinito)',"'Big Shoulders','Arial Narrow',sans-serif"],['moderno','Standard','Sobrio, come un’app del computer','-apple-system,system-ui,"Segoe UI",sans-serif'],['classico','Classico','Titoli con grazie, toni sobri','"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif'],['morbido','Morbido','Angoli arrotondati e pulsanti a pillola','ui-rounded,"SF Pro Rounded","Nunito",system-ui'],['compatto','Compatto','Più righe in liste, agenda e tabelle','-apple-system,system-ui,"Segoe UI",sans-serif'],['essenziale','Essenziale','Carattere del dispositivo, linee minime','system-ui,-apple-system,"Segoe UI",sans-serif']];
 const LAYOUTS=[['lato','Menu a sinistra','Il menu sta in una colonna laterale (predefinito)'],['alto','Menu in alto','Barra orizzontale in cima, contenuto a tutta larghezza'],['diario','Diario','Menu in alto e una colonna centrale, un riquadro sotto l’altro']];
-function uiPrefs(){const u=(DB&&DB.me&&DB.me.ui)||{};return{style:STILI.some(x=>x[0]===u.style)?u.style:'moderno',pal:PALETTE[u.pal]?u.pal:'salvia',layout:LAYOUTS.some(x=>x[0]===u.layout)?u.layout:'lato'}}
+function uiPrefs(){const u=(DB&&DB.me&&DB.me.ui)||{};return{style:STILI.some(x=>x[0]===u.style)?u.style:'agenda',pal:PALETTE[u.pal]?u.pal:'inchiostro',layout:LAYOUTS.some(x=>x[0]===u.layout)?u.layout:'lato'}}
 function applyUI(){const u=uiPrefs(),r=document.documentElement;
   if(u.style==='moderno')delete r.dataset.style;else r.dataset.style=u.style;
   if(u.pal==='salvia')delete r.dataset.pal;else r.dataset.pal=u.pal;

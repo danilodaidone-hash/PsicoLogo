@@ -136,6 +136,21 @@ main{padding-block:26px 60px;padding-inline:clamp(16px,3vw,36px);min-width:0;dis
 .tl-time{font-family:var(--f-mono);font-size:.85rem;width:48px;flex:none}
 .grow{flex:1;min-width:0}
 .tbl-wrap{overflow-x:auto}
+.res>header{flex-wrap:wrap;gap:10px}.resctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--fg);border-radius:var(--r);overflow:hidden}
+.seg button{border:0;background:none;color:var(--fg);padding:5px 14px;font:inherit;font-size:.85rem;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.resnav{display:inline-flex;gap:4px;align-items:center}.resnav select{width:auto;min-width:150px;font-weight:700}.resnav .btn{min-width:34px;justify-content:center}.resnav .btn:disabled{opacity:.35;cursor:default}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.kpi{padding:12px 16px;border-right:1px solid var(--line);min-width:0}.kpi:last-child{border-right:0}
+.kpi .l{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.kpi .v{font-family:var(--f-display);font-weight:700;font-size:1.7rem;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}.kpi .v.neg{color:var(--bad)}
+.kpi .d{font-size:.8rem;color:var(--muted)}.kpi .d .up{color:var(--good)}.kpi .d .dn{color:var(--bad)}
+.resh{font-family:var(--f-display);font-size:1.05rem;margin:16px 16px 6px}
+.resbarc{width:26%}.resbar{position:relative;height:9px;background:var(--surface-2);min-width:80px}.resbar i{position:absolute;inset:0 auto 0 0;background:var(--fg)}
+tr.resm{cursor:pointer}tr.resm:hover td{background:var(--surface-2)}tr.resm.cur td{background:var(--accent-soft)}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:nth-child(2){border-right:0}.kpi:nth-child(-n+2){border-bottom:1px solid var(--line)}.resbarc,.res .hs{display:none}.res td{white-space:nowrap}.kpi .v{font-size:1.35rem}}
+[data-style="contrasto"] .resh,[data-style="agenda"] .resh{text-transform:uppercase}
 table{width:100%;border-collapse:collapse;font-size:.9rem}
 th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
 td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -797,14 +812,17 @@ function seed(prof,st){const L=prof==='logopedia',N=prof==='neuropsicomotricita'
   const lastW=Math.ceil((parse(END)-W0)/(7*864e5));
   const FESTE=['01-01','01-06','04-25','05-01','06-02','08-15','11-01','12-08','12-25','12-26'];
   const noteTxt=N?['Bambino collaborante. Percorso motorio con equilibrio e salti: migliora la stabilità. Consegnate indicazioni di gioco ai genitori.','Lavoro su motricità fine e prassie: ritaglio e costruzioni. Buona attenzione nella prima parte, poi necessita di pause.','Seduta centrata sulla regolazione: gioco sensoriale e attività a turno. Più tempo di gioco condiviso rispetto all’ultima volta.']:L?['Bambino collaborante. Esercizi di discriminazione e produzione in parola isolata: migliora la precisione. Consegnato materiale per casa ai genitori.','Lavoro sulla lettura di sillabe e parole bisillabe. Velocità in lieve miglioramento; persiste qualche inversione. Da rinforzare a casa.','Seduta centrata su denominazione e frasi brevi. Buona partecipazione, affaticamento nella seconda parte. Proseguire con supporti visivi.']:['Paziente puntuale. Riprende il tema della settimana precedente; emerge maggiore consapevolezza degli inneschi. Concordato un compito di auto-osservazione.','Seduta centrata sulla gestione delle emozioni nei contesti relazionali. Buona alleanza. Si rinforzano le strategie di respirazione.','Riferisce una settimana difficile. Lavoro sulla ristrutturazione dei pensieri automatici. Da riprendere il tema familiare.'];
-  patients.forEach(p=>{
-    for(let w=-5;w<=lastW;w++){
+  // storico dal 1° gennaio dell'anno scorso, con i pazienti che iniziano in settimane diverse e le pause di agosto e di Natale (serve ai resoconti dei mesi e degli anni passati)
+  const firstW=-Math.ceil((W0-new Date(TODAY.getFullYear()-1,0,1))/(7*864e5));
+  const pausa=md=>(md>='08-08'&&md<='08-28')||md>='12-23'||md<='01-06';
+  patients.forEach((p,pi)=>{p.w0=Math.min(-5,firstW+pi*5);
+    for(let w=p.w0;w<=lastW;w++){
       p.slots.forEach(([d,t])=>{
         const date=iso(addDays(W0,w*7+d));
-        if(date>END||FESTE.includes(date.slice(5)))return;
+        if(date>END||FESTE.includes(date.slice(5))||(date<T&&pausa(date.slice(5))))return;
         let status='prenotato';
         if(date<T){const x=rnd();status=x<.07?'assente':x<.13?'disdetto':'svolto'}
-        const type=w===-5?(L||N?'Valutazione':'Primo colloquio'):'Seduta';
+        const type=w===p.w0?(L||N?'Valutazione':'Primo colloquio'):'Seduta';
         appts.push({id:uid(),patientId:p.id,studioId:p.studioId,date,start:t,dur:L||N?45:50,type,status,invoiceId:null});
       });
     }
@@ -849,7 +867,7 @@ function seed(prof,st){const L=prof==='logopedia',N=prof==='neuropsicomotricita'
   tt(1,'MBI – Maslach Burnout Inventory','Esaurimento emotivo alto; depersonalizzazione media');
   tt(5,'SDAG / SDAI (insegnanti)','Disattenzione sopra soglia; iperattività nella norma');tt(5,'CBCL 6-18','Problemi di attenzione: area borderline');
   tt(8,'PDSS – Panic Disorder Severity Scale','Punteggio 14 – moderato');}
-  patients.forEach(p=>delete p.slots);
+  patients.forEach(p=>{delete p.slots;delete p.w0});
   return db;
 }
 function emptyDB(me,studio){return {me,studi:[studio],patients:[],appts:[],notes:[],tests:[],invoices:[]}}
@@ -1154,26 +1172,53 @@ function costoStudio(s,ym){
   const compensi=done.reduce((x,a)=>x+priceOf(a,DB.me),0);
   const ore=as.reduce((x,a)=>x+a.dur,0)/60;
   const v=+s.costo.valore||0;
-  const costo=s.costo.tipo==='mese'?v:s.costo.tipo==='ora'?r2(ore*v):s.costo.tipo==='percentuale'?r2(compensi*v/100):0;
+  const costo=s.costo.tipo==='mese'?(studioInUso(s,ym)?v:0):s.costo.tipo==='ora'?r2(ore*v):s.costo.tipo==='percentuale'?r2(compensi*v/100):0;
   return {sedute:done.length,compensi,ore,costo,netto:r2(compensi-costo)};
+}
+// Un affitto mensile si conta dal primo all'ultimo mese con appuntamenti (fino a oggi se lo studio è attivo), così i mesi di pausa restano coperti ma non quelli prima dell'apertura.
+function studioInUso(s,ym){const ms=DB.appts.filter(a=>a.studioId===s.id).map(a=>a.date.slice(0,7)).sort();if(!ms.length)return s.attivo!==false&&ym===T.slice(0,7);const last=s.attivo!==false&&T.slice(0,7)>ms[ms.length-1]?T.slice(0,7):ms[ms.length-1];return ym>=ms[0]&&ym<=last}
+const ymOf=(y,m)=>`${y}-${String(m+1).padStart(2,'0')}`;
+function resMesi(){const cur=T.slice(0,7);const first=DB.appts.map(a=>a.date.slice(0,7)).filter(x=>x<=cur).sort()[0]||cur;const out=[];let [y,m]=first.split('-').map(Number);m--;while(ymOf(y,m)<=cur){out.push(ymOf(y,m));if(++m>11){m=0;y++}}return out}
+function resRows(yms){const set=new Set(yms);const list=DB.studi.filter(s=>s.attivo!==false||DB.appts.some(a=>a.studioId===s.id&&set.has(a.date.slice(0,7))));
+  return list.map(s=>{const x=yms.map(ym=>costoStudio(s,ym)).reduce((a,r)=>({sedute:a.sedute+r.sedute,compensi:a.compensi+r.compensi,costo:a.costo+r.costo}),{sedute:0,compensi:0,costo:0});return{s,...x,compensi:r2(x.compensi),costo:r2(x.costo),netto:r2(x.compensi-x.costo)}}).filter(r=>r.s.attivo!==false||r.sedute||r.costo)}
+const resTot=rows=>rows.reduce((a,r)=>({sedute:a.sedute+r.sedute,compensi:r2(a.compensi+r.compensi),costo:r2(a.costo+r.costo),netto:r2(a.netto+r.netto)}),{sedute:0,compensi:0,costo:0,netto:0});
+function resDelta(a,b,lab){if(!b)return'';const p=Math.round((a-b)/Math.abs(b)*100);return `<b class="${p>=0?'up':'dn'}">${p>=0?'+':''}${p}%</b> ${lab}`}
+function resKpi(t,p,lab){const k=(l,v,d,neg)=>`<div class="kpi"><div class="l">${l}</div><div class="v ${neg?'neg':''}">${v}</div><div class="d">${d||'&nbsp;'}</div></div>`;
+  return `<div class="kpis">${k('Prestazioni',t.sedute,p&&resDelta(t.sedute,p.sedute,lab))}${k('Compensi',euro(t.compensi),p&&resDelta(t.compensi,p.compensi,lab))}${k('Costi studi',euro(t.costo))}${k('Netto',euro(t.netto),p&&resDelta(t.netto,p.netto,lab),t.netto<0)}</div>`}
+function resTable(rows,t){return `<div class="tbl-wrap"><table><thead><tr><th>Studio</th><th class="hs">Costo</th><th class="r">Prestazioni</th><th class="r">Compensi</th><th class="r">Costo studio</th><th class="r">Netto</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><span class="row" style="gap:6px;flex-wrap:nowrap;${sCol(r.s.id)}"><span class="dot"></span>${esc(r.s.nome)}${r.s.attivo===false?' <span class="muted small">(archiviato)</span>':''}</span></td><td class="muted hs">${costoLabel(r.s.costo)}</td><td class="r num">${r.sedute}</td><td class="r num">${euro(r.compensi)}</td><td class="r num">${euro(r.costo)}</td><td class="r num ${r.netto<0?'neg':''}"><b>${euro(r.netto)}</b></td></tr>`).join('')}
+    <tr><td><b>Totale</b></td><td class="hs"></td><td class="r num"><b>${t.sedute}</b></td><td class="r num"><b>${euro(t.compensi)}</b></td><td class="r num"><b>${euro(t.costo)}</b></td><td class="r num ${t.netto<0?'neg':''}"><b>${euro(t.netto)}</b></td></tr></tbody></table></div>`}
+function vResoconto(){
+  const R=S.res||(S.res={mode:'mese',ym:T.slice(0,7),y:+T.slice(0,4)});const all=resMesi();const cur=T.slice(0,7);
+  if(!all.includes(R.ym))R.ym=cur;const years=[...new Set(all.map(x=>+x.slice(0,4)))];if(!years.includes(R.y))R.y=+cur.slice(0,4);
+  const mName=ym=>MESI[+ym.slice(5)-1]+' '+ym.slice(0,4);
+  let title,sel,prev,next,body;
+  if(R.mode==='mese'){const i=all.indexOf(R.ym);prev=i>0;next=i<all.length-1;title=`Resoconto di ${mName(R.ym)}`;
+    sel=`<select data-res="pick" aria-label="Mese">${all.slice().reverse().map(ym=>`<option value="${ym}" ${ym===R.ym?'selected':''}>${cap(mName(ym))}</option>`).join('')}</select>`;
+    const rows=resRows([R.ym]),t=resTot(rows);const pym=(+R.ym.slice(0,4)-1)+R.ym.slice(4);const p=all.includes(pym)?resTot(resRows([pym])):null;
+    body=resKpi(t,p,`rispetto a ${mName(pym)}`)+resTable(rows,t)+`<p class="muted small" style="margin:0;padding:10px 16px 14px">${R.ym===cur?'Mese in corso: contano solo le prestazioni già svolte. ':''}Per le stanze a ore conta le ore prenotate nel mese; i compensi sono al netto del contributo integrativo e del bollo. Il costo dello studio è quello impostato oggi.</p>`;
+  }else{prev=years.includes(R.y-1);next=years.includes(R.y+1);title=`Resoconto del ${R.y}`;
+    sel=`<select data-res="pick" aria-label="Anno">${years.slice().reverse().map(y=>`<option value="${y}" ${y===R.y?'selected':''}>${y}</option>`).join('')}</select>`;
+    const yms=all.filter(x=>+x.slice(0,4)===R.y),rows=resRows(yms),t=resTot(rows);const p=prev?resTot(resRows(all.filter(x=>+x.slice(0,4)===R.y-1))):null;
+    const months=yms.map(ym=>({ym,...resTot(resRows([ym]))}));const max=Math.max(1,...months.map(x=>x.netto));
+    body=resKpi(t,p,`rispetto al ${R.y-1}`)+`<h3 class="resh">Per studio</h3>`+resTable(rows,t)+`<h3 class="resh">Mese per mese</h3><div class="tbl-wrap"><table><thead><tr><th>Mese</th><th class="r">Prestazioni</th><th class="r">Compensi</th><th class="r">Costi</th><th class="r">Netto</th><th class="resbarc"></th></tr></thead><tbody>
+    ${months.map(x=>`<tr class="resm ${x.ym===cur?'cur':''}" data-act="resMese" data-v="${x.ym}" title="Apri il resoconto del mese"><td>${cap(MESI[+x.ym.slice(5)-1])}${x.ym===cur?' <span class="muted">(in corso)</span>':''}</td><td class="r num">${x.sedute}</td><td class="r num">${euro(x.compensi)}</td><td class="r num">${euro(x.costo)}</td><td class="r num ${x.netto<0?'neg':''}"><b>${euro(x.netto)}</b></td><td class="resbarc"><div class="resbar"><i style="width:${Math.max(0,x.netto/max*100).toFixed(1)}%"></i></div></td></tr>`).join('')}
+    <tr><td><b>Totale ${R.y}</b></td><td class="r num"><b>${t.sedute}</b></td><td class="r num"><b>${euro(t.compensi)}</b></td><td class="r num"><b>${euro(t.costo)}</b></td><td class="r num"><b>${euro(t.netto)}</b></td><td class="resbarc"></td></tr></tbody></table></div>
+    <p class="muted small" style="margin:0;padding:10px 16px 14px">Tocca un mese per aprirne il dettaglio per studio. Il costo degli studi è quello impostato oggi.</p>`}
+  return `<section class="panel res"><header><h2>${title}</h2><div class="resctl"><div class="seg" role="group" aria-label="Periodo"><button type="button" data-act="resMode" data-v="mese" aria-pressed="${R.mode==='mese'}">Mese</button><button type="button" data-act="resMode" data-v="anno" aria-pressed="${R.mode==='anno'}">Anno</button></div>
+    <div class="resnav"><button type="button" class="btn small" data-act="resStep" data-v="-1" ${prev?'':'disabled'} aria-label="Precedente">‹</button>${sel}<button type="button" class="btn small" data-act="resStep" data-v="1" ${next?'':'disabled'} aria-label="Successivo">›</button></div></div></header>${body}</section>`;
 }
 const costoLabel=c=>c.tipo==='mese'?`${euro(+c.valore)} al mese`:c.tipo==='ora'?`${euro(+c.valore)} l’ora`:c.tipo==='percentuale'?`${c.valore}% sul compenso`:'Nessun costo';
 function vStudi(){
-  const ym=T.slice(0,7);
   const W0=monday(TODAY),days=[...Array(6)].map((_,i)=>iso(addDays(W0,i)));
   const st=activeStudi();const arch=DB.studi.filter(s=>s.attivo===false);
-  const rows=st.map(s=>({s,...costoStudio(s,ym)}));
-  const tot=rows.reduce((a,r)=>({sedute:a.sedute+r.sedute,compensi:a.compensi+r.compensi,costo:a.costo+r.costo,netto:a.netto+r.netto}),{sedute:0,compensi:0,costo:0,netto:0});
   return `<div class="head"><div><div class="eyebrow">${st.length} ${st.length===1?'studio attivo':'studi attivi'}</div><h1>I miei studi</h1></div><button class="btn primary" data-act="newStudio">Aggiungi studio</button></div>
   <div class="team">${st.map(s=>{const n=DB.appts.filter(a=>a.studioId===s.id&&days.includes(a.date)&&a.status!=='disdetto').length;const pz=DB.patients.filter(p=>p.studioId===s.id).length;
     return `<article class="panel" style="${sCol(s.id)}"><div class="row"><span class="dot" style="width:14px;height:14px"></span><div class="grow"><h2>${esc(s.nome)}</h2><div class="muted" style="font-size:.85rem">${esc(s.indirizzo)||'Indirizzo non indicato'}</div></div></div>
     ${s.nota?`<p class="muted small" style="margin:0">${esc(s.nota)}</p>`:''}
     <dl class="kv" style="font-size:.88rem"><dt>Orari</dt><dd>${[0,1,2,3,4,5].filter(i=>s.orari[i]).map(i=>`${cap(GIORNI[i].slice(0,3))} ${s.orari[i].join('–')}`).join('<br>')||'—'}</dd><dt>Costo</dt><dd>${costoLabel(s.costo)}</dd><dt>Pazienti</dt><dd>${pz}</dd><dt>Questa settimana</dt><dd>${n} appuntamenti</dd></dl>
     <div class="acts"><button class="btn small" data-act="editStudio" data-id="${s.id}">Modifica</button>${st.length>1?`<button class="btn small danger" data-act="archStudio" data-id="${s.id}">Archivia</button>`:''}</div></article>`}).join('')}</div>
-  <section class="panel"><header><h2>Resoconto di ${MESI[TODAY.getMonth()]}</h2><span class="muted" style="font-size:.85rem">Compensi delle prestazioni svolte meno il costo dello studio</span></header><div class="tbl-wrap"><table><thead><tr><th>Studio</th><th>Costo</th><th class="r">Prestazioni</th><th class="r">Compensi</th><th class="r">Costo studio</th><th class="r">Netto</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr><td><span class="row" style="gap:6px;flex-wrap:nowrap;${sCol(r.s.id)}"><span class="dot"></span>${esc(r.s.nome)}</span></td><td class="muted">${costoLabel(r.s.costo)}</td><td class="r num">${r.sedute}</td><td class="r num">${euro(r.compensi)}</td><td class="r num">${euro(r.costo)}</td><td class="r num ${r.netto<0?'neg':''}"><b>${euro(r.netto)}</b></td></tr>`).join('')}
-    <tr><td><b>Totale</b></td><td></td><td class="r num"><b>${tot.sedute}</b></td><td class="r num"><b>${euro(tot.compensi)}</b></td><td class="r num"><b>${euro(tot.costo)}</b></td><td class="r num"><b>${euro(tot.netto)}</b></td></tr>
-  </tbody></table></div><p class="muted small" style="margin:0;padding:0 16px 14px">Per le stanze a ore conta le ore prenotate nel mese; i compensi sono al netto del contributo integrativo e del bollo.</p></section>
+  ${vResoconto()}
   ${arch.length?`<section class="panel"><header><h2>Studi archiviati</h2></header><ul class="list">${arch.map(s=>`<li style="${sCol(s.id)}"><span class="dot"></span><div class="grow"><b>${esc(s.nome)}</b><div class="muted" style="font-size:.85rem">${DB.appts.filter(a=>a.studioId===s.id).length} appuntamenti nello storico</div></div><button class="btn small" data-act="reactStudio" data-id="${s.id}">Riattiva</button></li>`).join('')}</ul></section>`:''}`;
 }
 
@@ -1340,6 +1385,7 @@ document.addEventListener('input',e=>{const t=e.target;if(!t.form)return;
   if(t.name==='citta'){loadComuni().then(()=>{comuniFill(t.value);if(COMUNI.list.some(c=>c.k===normC(t.value)&&c.n===t.value))comuneApply(t.form,true)})}
   else if(t.name==='prov'){const v=t.value.toUpperCase();if(v!==t.value)t.value=v}
   else if(t.name==='cap'&&/^\d{5}$/.test(t.value.trim()))loadComuni().then(()=>capApply(t.form))});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.res!=='pick'||!S.res)return;if(S.res.mode==='anno')S.res.y=+t.value;else S.res.ym=t.value;render()});
 document.addEventListener('change',e=>{const t=e.target;if(t.form&&t.name==='citta')loadComuni().then(()=>comuneApply(t.form,false))});
 
 
@@ -1868,6 +1914,9 @@ document.addEventListener('click',e=>{
     case 'newInv':invForm(el.dataset.p);break;
     case 'inv':invDetail(id);break;
     case 'invF':S.invFilter=el.dataset.v;render();break;
+    case 'resMode':{const R=S.res;R.mode=el.dataset.v;if(R.mode==='anno')R.y=+R.ym.slice(0,4);render();break}
+    case 'resStep':{const R=S.res,d=+el.dataset.v;if(R.mode==='anno')R.y+=d;else{const all=resMesi(),i=all.indexOf(R.ym)+d;if(all[i])R.ym=all[i]}render();break}
+    case 'resMese':S.res.mode='mese';S.res.ym=el.dataset.v;render();break;
     case 'newStudio':studioForm(null);break;
     case 'editStudio':studioForm(studio(id));break;
     case 'archStudio':archiveStudio(id);break;
